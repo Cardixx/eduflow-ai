@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class SentimentAnalysisServiceImpl implements SentimentAnalysisService {
 
-    private static final Set<String> POSITIVE_KEYWORDS = Set.of("good", "great", "excellent", "clear", "helpful", "super", "bien", "excellent", "genial");
+    private static final Set<String> POSITIVE_KEYWORDS = Set.of("good", "great", "excellent", "clear", "helpful", "super", "bien", "genial");
     private static final Set<String> NEGATIVE_KEYWORDS = Set.of("bad", "poor", "confusing", "late", "boring", "nul", "mauvais", "difficile", "problem");
 
     @Override
