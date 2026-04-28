@@ -23,40 +23,63 @@ export default function Register() {
   const [parcoursList, setParcoursList] = useState<ParcoursDto[]>([]);
   const [mentions, setMentions] = useState<MentionDto[]>([]);
   const [parcoursId, setParcoursId] = useState<number | undefined>();
+  const [loadingAcademic, setLoadingAcademic] = useState(false);
 
   useEffect(() => {
     if (role === "STUDENT") {
-      api.get<MentionDto[]>("/academic/mentions").then((res) => {
-        setMentions(res.data);
-        if (res.data[0]) {
-          api.get<ParcoursDto[]>(`/academic/mentions/${res.data[0].id}/parcours`).then((pRes) => {
-            setParcoursList(pRes.data);
-            if (pRes.data[0]) {
-              api.get<NiveauDto[]>(`/academic/parcours/${pRes.data[0].id}/niveaux`).then((nRes) => {
-                setNiveaux(nRes.data);
-                if (nRes.data[0]) setNiveauId(nRes.data[0].id);
-              });
-            }
-          });
-        }
-      });
+      setLoadingAcademic(true);
+      api.get<MentionDto[]>("/academic/mentions")
+        .then((res) => {
+          setMentions(res.data);
+          if (res.data.length > 0) {
+            return api.get<ParcoursDto[]>(`/academic/mentions/${res.data[0].id}/parcours`);
+          }
+          throw new Error("No mentions found");
+        })
+        .then((pRes) => {
+          setParcoursList(pRes.data);
+          if (pRes.data.length > 0) {
+            setParcoursId(pRes.data[0].id);
+            return api.get<NiveauDto[]>(`/academic/parcours/${pRes.data[0].id}/niveaux`);
+          }
+          throw new Error("No parcours found");
+        })
+        .then((nRes) => {
+          setNiveaux(nRes.data);
+          if (nRes.data.length > 0) setNiveauId(nRes.data[0].id);
+        })
+        .catch((err) => console.error("Failed to load academic data:", err))
+        .finally(() => setLoadingAcademic(false));
     }
   }, [role]);
 
   useEffect(() => {
     if (parcoursId) {
-      api.get<NiveauDto[]>(`/academic/parcours/${parcoursId}/niveaux`).then((res) => {
-        setNiveaux(res.data);
-        if (res.data[0]) setNiveauId(res.data[0].id);
-      });
+      api.get<NiveauDto[]>(`/academic/parcours/${parcoursId}/niveaux`)
+        .then((res) => {
+          setNiveaux(res.data);
+          if (res.data.length > 0) setNiveauId(res.data[0].id);
+        })
+        .catch((err) => console.error("Failed to load niveaux:", err));
     }
   }, [parcoursId]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (role === "STUDENT" && (!studentNumber.trim() || !niveauId)) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
     setLoading(true);
     try {
-      await register({ fullName, email, password, role, studentNumber: role === "STUDENT" ? studentNumber : undefined, niveauId: role === "STUDENT" ? niveauId : undefined });
+      await register({
+        fullName,
+        email,
+        password,
+        role,
+        studentNumber: role === "STUDENT" ? studentNumber : undefined,
+        niveauId: role === "STUDENT" ? niveauId : undefined
+      });
       toast.success("Compte créé !");
       navigate("/app");
     } catch (err) {
@@ -127,11 +150,16 @@ export default function Register() {
                 <select
                   value={parcoursId || ""}
                   onChange={(e) => setParcoursId(Number(e.target.value))}
-                  className="w-full px-3 py-3 rounded-xl border border-border bg-card input-glow transition-all outline-none text-sm"
+                  disabled={loadingAcademic || parcoursList.length === 0}
+                  className="w-full px-3 py-3 rounded-xl border border-border bg-card input-glow transition-all outline-none text-sm disabled:opacity-50"
                 >
-                  {parcoursList.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
+                  {parcoursList.length === 0 ? (
+                    <option value="">Chargement...</option>
+                  ) : (
+                    parcoursList.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))
+                  )}
                 </select>
               </div>
             </>
