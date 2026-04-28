@@ -70,6 +70,19 @@ public class StudentServiceImpl implements StudentService {
         enrollmentRepository.save(enrollment);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<CourseElementDto> getAvailableCoursesForEnrollment() {
+        Student student = currentStudent();
+        List<Long> enrolledEcIds = enrollmentRepository.findByStudentId(student.getId()).stream()
+                .map(e -> e.getCourseElement().getId())
+                .toList();
+        return courseElementRepository.findAll().stream()
+                .filter(ec -> !enrolledEcIds.contains(ec.getId()))
+                .map(this::toCourseElementDto)
+                .toList();
+    }
+
     private Student currentStudent() {
         return studentRepository.findByUserId(securityFacade.currentUser().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));

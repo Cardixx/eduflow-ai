@@ -7,5 +7,6 @@ import java.util.List;
 public interface StudentService {
     StudentProfileDto getCurrentStudentProfile();
     List<CourseElementDto> getMyCourses();
+    List<CourseElementDto> getAvailableCoursesForEnrollment();
     void enrollCurrentStudent(Long ecId);
 }

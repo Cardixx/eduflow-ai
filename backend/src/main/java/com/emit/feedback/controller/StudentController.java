@@ -7,6 +7,7 @@ import com.emit.feedback.dto.user.StudentProfileDto;
 import com.emit.feedback.service.StudentService;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.emit.feedback.repository.EnrollmentRepository;
 import com.emit.feedback.repository.FeedbackRepository;
 import com.emit.feedback.service.impl.SecurityFacade;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/students")
@@ -51,6 +51,11 @@ public class StudentController {
                 "enrollmentCount", enrollmentCount,
                 "participationRate", enrollmentCount == 0 ? 0 : (feedbackCount * 100 / enrollmentCount)
         );
+    }
+
+    @GetMapping("/available-courses")
+    public List<CourseElementDto> getAvailableCourses() {
+        return studentService.getAvailableCoursesForEnrollment();
     }
 
     @PostMapping("/me/enrollments")

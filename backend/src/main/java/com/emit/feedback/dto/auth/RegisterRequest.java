@@ -14,6 +14,7 @@ public record RegisterRequest(
         @NotNull RoleName role,
         String studentNumber,
         String teacherCode,
+        String department,
         Long niveauId
 ) {
 }

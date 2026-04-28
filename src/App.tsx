@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import ECList from "./pages/student/ECList";
+import EnrollmentPage from "./pages/student/EnrollmentPage";
 import FeedbackHistory from "./pages/student/FeedbackHistory";
 import FeedbackViewer from "./pages/teacher/FeedbackViewer";
 import SentimentAnalysis from "./pages/teacher/SentimentAnalysis";
@@ -35,9 +36,9 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+              <Route path="app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                 <Route index element={<Dashboard />} />
-                <Route path="ecs" element={<ECList />} />
+                <Route path="ecs" element={<EnrollmentRouter />} />
                 <Route path="feedback" element={<FeedbackRouter />} />
                 <Route path="history" element={<FeedbackHistory />} />
                 <Route path="sentiment" element={<ProtectedRoute roles={["TEACHER", "ADMIN"]}><SentimentAnalysis /></ProtectedRoute>} />
@@ -60,6 +61,12 @@ function FeedbackRouter() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   return user.role === "STUDENT" ? <ECList /> : <FeedbackViewer />;
+}
+
+function EnrollmentRouter() {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  return user.role === "STUDENT" ? <EnrollmentPage /> : <FeedbackViewer />;
 }
 
 export default App;
