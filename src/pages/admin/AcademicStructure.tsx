@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { ChevronRight, Network, Building2, GraduationCap, Calendar, BookOpen, Layers } from "lucide-react";
+import { ChevronRight, Network, Building2, GraduationCap, Calendar, BookOpen, Layers, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import {
   mapEc,
@@ -19,33 +20,47 @@ import {
 
 type Node = { id: string; label: string; sub?: string; icon: any; children?: Node[] };
 
-function TreeNode({ node, depth }: { node: Node; depth: number }) {
+function TreeNode({ node, depth, onDelete }: { node: Node; depth: number; onDelete?: (id: string) => void }) {
   const [open, setOpen] = useState(depth < 1);
   const has = !!node.children?.length;
+  const isEc = node.id.startsWith("e-");
+
   return (
     <div>
-      <motion.button
-        whileHover={{ x: 2 }}
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
+      <div
+        className="group w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
         style={{ paddingLeft: depth * 20 + 12 }}
       >
-        {has ? (
-          <motion.div animate={{ rotate: open ? 90 : 0 }}>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </motion.div>
-        ) : <div className="w-4" />}
-        <div className="h-7 w-7 rounded-lg bg-muted/60 grid place-items-center"><node.icon className="h-3.5 w-3.5 text-primary" /></div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium truncate">{node.label}</div>
-          {node.sub && <div className="text-[11px] text-muted-foreground truncate">{node.sub}</div>}
-        </div>
-      </motion.button>
+        <motion.button
+          whileHover={{ x: 2 }}
+          onClick={() => setOpen((o) => !o)}
+          className="flex-1 flex items-center gap-2 overflow-hidden"
+        >
+          {has ? (
+            <motion.div animate={{ rotate: open ? 90 : 0 }}>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </motion.div>
+          ) : <div className="w-4" />}
+          <div className="h-7 w-7 rounded-lg bg-muted/60 grid place-items-center"><node.icon className="h-3.5 w-3.5 text-primary" /></div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">{node.label}</div>
+            {node.sub && <div className="text-[11px] text-muted-foreground truncate">{node.sub}</div>}
+          </div>
+        </motion.button>
+        {isEc && onDelete && (
+          <button
+            onClick={() => onDelete(node.id)}
+            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-all"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
       <AnimatePresence initial={false}>
         {open && has && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }} className="overflow-hidden">
-            {node.children!.map((c) => <TreeNode key={c.id} node={c} depth={depth + 1} />)}
+            {node.children!.map((c) => <TreeNode key={c.id} node={c} depth={depth + 1} onDelete={onDelete} />)}
           </motion.div>
         )}
       </AnimatePresence>
@@ -57,6 +72,19 @@ export default function AcademicStructure() {
   const [tree, setTree] = useState<Node[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleDelete = async (nodeId: string) => {
+    if (!confirm("Supprimer cet EC ?")) return;
+    const realId = nodeId.replace("e-", "");
+    try {
+      await api.delete(`/academic/ecs/${realId}`);
+      toast.success("EC supprimé");
+      // Refresh tree (simplified)
+      window.location.reload();
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
 
   useEffect(() => {
     const loadTree = async () => {
@@ -156,7 +184,7 @@ export default function AcademicStructure() {
       <div className="card-elegant p-3">
         {loading && <div className="p-4 text-sm text-muted-foreground">Chargement de la structure académique…</div>}
         {error && <div className="p-4 text-sm text-destructive">{error}</div>}
-        {!loading && !error && tree.map((n) => <TreeNode key={n.id} node={n} depth={0} />)}
+        {!loading && !error && tree.map((n) => <TreeNode key={n.id} node={n} depth={0} onDelete={handleDelete} />)}
       </div>
     </div>
   );

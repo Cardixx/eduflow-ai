@@ -86,7 +86,9 @@ public class AuthServiceImpl implements AuthService {
             teacher.setTeacherCode(request.teacherCode() == null || request.teacherCode().isBlank()
                     ? "ENS-" + savedUser.getId()
                     : request.teacherCode());
-            teacher.setDepartment("EMIT");
+            teacher.setDepartment(request.department() == null || request.department().isBlank()
+                    ? "Non spécifié"
+                    : request.department());
             teacherRepository.save(teacher);
         }
 

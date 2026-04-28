@@ -1,5 +1,6 @@
 package com.emit.feedback.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -35,6 +36,6 @@ public class Feedback extends BaseEntity {
     @Column(nullable = false)
     private boolean anonymous;
 
-    @OneToOne(mappedBy = "feedback")
+    @OneToOne(mappedBy = "feedback", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private SentimentAnalysis sentimentAnalysis;
 }

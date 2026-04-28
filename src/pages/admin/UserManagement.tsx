@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Users as UsersIcon, Plus, Search, MoreVertical, Mail, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { mapUser, type UserDto } from "@/lib/backend";
 import type { User } from "@/types";
@@ -36,6 +37,17 @@ export default function UserManagement() {
       u.email.toLowerCase().includes(q.toLowerCase())
   );
 
+  const handleDelete = async (id: number) => {
+    if (!confirm("Supprimer cet utilisateur ?")) return;
+    try {
+      await api.delete(`/admin/users/${id}`);
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      toast.success("Utilisateur supprimé");
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -45,7 +57,10 @@ export default function UserManagement() {
           </h1>
           <p className="text-muted-foreground mt-1">Gérez les comptes étudiants, enseignants et administrateurs.</p>
         </div>
-        <button className="px-4 py-2.5 rounded-xl bg-gradient-aurora text-white font-semibold flex items-center gap-2 btn-glow shadow-elegant text-sm">
+        <button 
+          onClick={() => toast.info("Utilisez le formulaire d'inscription pour créer un utilisateur (pour l'instant)")}
+          className="px-4 py-2.5 rounded-xl bg-gradient-aurora text-white font-semibold flex items-center gap-2 btn-glow shadow-elegant text-sm"
+        >
           <Plus className="h-4 w-4" /> Nouveau
         </button>
       </div>
@@ -94,7 +109,12 @@ export default function UserManagement() {
                     </span>
                   </td>
                   <td className="px-5 py-4 text-right">
-                    <button className="p-2 rounded-lg hover:bg-muted transition-colors"><MoreVertical className="h-4 w-4" /></button>
+                    <button 
+                      onClick={() => handleDelete(u.id)}
+                      className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
                   </td>
                 </motion.tr>
               ))}

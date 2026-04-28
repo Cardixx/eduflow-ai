@@ -38,6 +38,18 @@ export default function Reports() {
     [report]
   );
 
+  const handleExport = () => {
+    if (!report) return;
+    const data = JSON.stringify(report, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `report-${report.ecCode}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -47,8 +59,11 @@ export default function Reports() {
           </h1>
           <p className="text-muted-foreground mt-1">Tableaux de bord détaillés et exports prêts pour la direction.</p>
         </div>
-        <button className="px-4 py-2.5 rounded-xl bg-gradient-aurora text-white font-semibold flex items-center gap-2 btn-glow shadow-elegant text-sm">
-          <Download className="h-4 w-4" /> Exporter PDF
+        <button 
+          onClick={handleExport}
+          className="px-4 py-2.5 rounded-xl bg-gradient-aurora text-white font-semibold flex items-center gap-2 btn-glow shadow-elegant text-sm"
+        >
+          <Download className="h-4 w-4" /> Exporter Données
         </button>
       </div>
 

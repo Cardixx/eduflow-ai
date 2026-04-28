@@ -15,16 +15,27 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.emit.feedback.repository.CourseElementRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
 @RequestMapping("/api/academic")
 @RequiredArgsConstructor
 public class AcademicController {
 
     private final AcademicStructureService academicStructureService;
+    private final CourseElementRepository courseElementRepository;
 
     @GetMapping("/mentions")
     public List<MentionDto> getMentions() {
         return academicStructureService.getMentions();
+    }
+
+    @DeleteMapping("/ecs/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteEc(@PathVariable Long id) {
+        courseElementRepository.deleteById(id);
     }
 
     @GetMapping("/mentions/{mentionId}/parcours")

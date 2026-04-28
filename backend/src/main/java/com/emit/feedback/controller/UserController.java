@@ -16,6 +16,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.emit.feedback.dto.auth.RegisterRequest;
+import com.emit.feedback.service.AuthService;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
@@ -26,6 +31,7 @@ public class UserController {
     private final FeedbackRepository feedbackRepository;
     private final CourseElementRepository courseElementRepository;
     private final MentionRepository mentionRepository;
+    private final AuthService authService;
 
     @GetMapping("/users")
     public List<UserDto> getAllUsers() {
@@ -41,6 +47,16 @@ public class UserController {
                                 .orElse(RoleName.ETUDIANT)
                 ))
                 .toList();
+    }
+
+    @PostMapping("/users")
+    public UserDto createUser(@Valid @RequestBody RegisterRequest request) {
+        return authService.register(request).user();
+    }
+
+    @DeleteMapping("/users/{id}")
+    public void deleteUser(@PathVariable Long id) {
+        userRepository.deleteById(id);
     }
 
     @GetMapping("/stats")

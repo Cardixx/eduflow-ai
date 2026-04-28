@@ -7,7 +7,7 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (data: { fullName: string; email: string; password: string; role: Role; studentNumber?: string; niveauId?: number }) => Promise<User>;
+  register: (data: { fullName: string; email: string; password: string; role: Role; studentNumber?: string; niveauId?: number; teacherCode?: string; department?: string }) => Promise<User>;
   logout: () => void;
 }
 
@@ -47,6 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...(payload.role === "STUDENT" && {
         studentNumber: payload.studentNumber,
         niveauId: payload.niveauId,
+      }),
+      ...(payload.role === "TEACHER" && {
+        teacherCode: payload.teacherCode,
+        department: payload.department,
       }),
     });
     const mappedUser = mapUser(data.user);

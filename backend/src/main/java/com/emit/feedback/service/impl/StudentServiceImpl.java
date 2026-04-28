@@ -13,6 +13,9 @@ import com.emit.feedback.repository.CourseElementRepository;
 import com.emit.feedback.repository.EnrollmentRepository;
 import com.emit.feedback.repository.StudentRepository;
 import com.emit.feedback.service.StudentService;
+import com.emit.feedback.entity.Notification;
+import com.emit.feedback.entity.enums.NotificationType;
+import com.emit.feedback.repository.NotificationRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,6 +30,7 @@ public class StudentServiceImpl implements StudentService {
     private final EnrollmentRepository enrollmentRepository;
     private final CourseElementRepository courseElementRepository;
     private final AcademicYearRepository academicYearRepository;
+    private final NotificationRepository notificationRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -68,6 +72,18 @@ public class StudentServiceImpl implements StudentService {
         enrollment.setCourseElement(ec);
         enrollment.setAcademicYear(currentYear);
         enrollmentRepository.save(enrollment);
+
+        createEnrollmentNotification(student, ec);
+    }
+
+    private void createEnrollmentNotification(Student student, CourseElement ec) {
+        Notification notification = new Notification();
+        notification.setUser(student.getUser());
+        notification.setTitle("Inscription confirmée");
+        notification.setMessage("Vous êtes maintenant inscrit à l'EC : " + ec.getCode() + " - " + ec.getName());
+        notification.setType(NotificationType.SUCCESS);
+        notification.setRead(false);
+        notificationRepository.save(notification);
     }
 
     @Override

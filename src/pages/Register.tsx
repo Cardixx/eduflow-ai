@@ -18,6 +18,8 @@ export default function Register() {
   const [role, setRole] = useState<Role>("STUDENT");
   const [loading, setLoading] = useState(false);
   const [studentNumber, setStudentNumber] = useState("");
+  const [teacherCode, setTeacherCode] = useState("");
+  const [department, setDepartment] = useState("");
   const [niveauId, setNiveauId] = useState<number | undefined>();
   const [niveaux, setNiveaux] = useState<NiveauDto[]>([]);
   const [parcoursList, setParcoursList] = useState<ParcoursDto[]>([]);
@@ -78,7 +80,9 @@ export default function Register() {
         password,
         role,
         studentNumber: role === "STUDENT" ? studentNumber : undefined,
-        niveauId: role === "STUDENT" ? niveauId : undefined
+        niveauId: role === "STUDENT" ? niveauId : undefined,
+        teacherCode: role === "TEACHER" ? teacherCode : undefined,
+        department: role === "TEACHER" ? department : undefined,
       });
       toast.success("Compte créé !");
       navigate("/app");
@@ -161,6 +165,31 @@ export default function Register() {
                     ))
                   )}
                 </select>
+              </div>
+            </>
+          )}
+
+          {role === "TEACHER" && (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Code enseignant</label>
+                <input
+                  required
+                  value={teacherCode}
+                  onChange={(e) => setTeacherCode(e.target.value)}
+                  placeholder="Ex: ENS-2024-001"
+                  className="w-full px-3 py-3 rounded-xl border border-border bg-card input-glow transition-all outline-none text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Département / Mention</label>
+                <input
+                  required
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  placeholder="Ex: Informatique"
+                  className="w-full px-3 py-3 rounded-xl border border-border bg-card input-glow transition-all outline-none text-sm"
+                />
               </div>
             </>
           )}
