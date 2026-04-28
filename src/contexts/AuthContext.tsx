@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import type { Role, User } from "@/types";
-import { USE_MOCK, api } from "@/lib/api";
-import { mockUsers } from "@/lib/mockData";
+import { api } from "@/lib/api";
+import { mapUser, roleToBackendRole, type AuthResponse } from "@/lib/backend";
 
 interface AuthContextValue {
   user: User | null;
@@ -32,28 +32,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    if (USE_MOCK) {
-      await new Promise((r) => setTimeout(r, 600));
-      const entry = mockUsers[email.toLowerCase()];
-      if (!entry || entry.password !== password) throw new Error("Identifiants invalides");
-      persist(entry.user, "mock-jwt-token");
-      return entry.user;
-    }
-    const { data } = await api.post("/auth/login", { email, password });
-    persist(data.user, data.token);
-    return data.user as User;
+    const { data } = await api.post<AuthResponse>("/auth/login", { email, password });
+    const mappedUser = mapUser(data.user);
+    persist(mappedUser, data.accessToken);
+    return mappedUser;
   };
 
   const register: AuthContextValue["register"] = async (payload) => {
-    if (USE_MOCK) {
-      await new Promise((r) => setTimeout(r, 700));
-      const u: User = { id: Date.now(), email: payload.email, fullName: payload.fullName, role: payload.role };
-      persist(u, "mock-jwt-token");
-      return u;
-    }
-    const { data } = await api.post("/auth/register", payload);
-    persist(data.user, data.token);
-    return data.user as User;
+    const { data } = await api.post<AuthResponse>("/auth/register", {
+      email: payload.email,
+      password: payload.password,
+      fullName: payload.fullName,
+      role: roleToBackendRole(payload.role),
+    });
+    const mappedUser = mapUser(data.user);
+    persist(mappedUser, data.accessToken);
+    return mappedUser;
   };
 
   const logout = () => {

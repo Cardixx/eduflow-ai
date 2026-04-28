@@ -1,14 +1,41 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
-import { ecs, sentimentFor } from "@/lib/mockData";
+import { useEffect, useState } from "react";
 import { TypingText } from "@/components/TypingText";
 import { Sparkles, TrendingUp } from "lucide-react";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
+import { api } from "@/lib/api";
+import { mapEc, reportToSentiment, type CourseElementDto, type ReportDto } from "@/lib/backend";
+import type { EC, SentimentAnalysis as SentimentAnalysisType } from "@/types";
 
 export default function SentimentAnalysis() {
-  const [ecId, setEcId] = useState(ecs[0].id);
-  const data = sentimentFor(ecId);
+  const [ecs, setEcs] = useState<EC[]>([]);
+  const [ecId, setEcId] = useState<number | null>(null);
+  const [data, setData] = useState<SentimentAnalysisType | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await api.get<CourseElementDto[]>("/teachers/me/courses");
+      const mapped = data.map(mapEc);
+      setEcs(mapped);
+      if (!mapped[0]) return;
+      setEcId(mapped[0].id);
+      const report = await api.get<ReportDto>(`/reports/ec/${mapped[0].id}`);
+      setData(reportToSentiment(report.data));
+    };
+    void load();
+  }, []);
+
+  useEffect(() => {
+    const loadReport = async () => {
+      if (!ecId) return;
+      const report = await api.get<ReportDto>(`/reports/ec/${ecId}`);
+      setData(reportToSentiment(report.data));
+    };
+    void loadReport();
+  }, [ecId]);
+
+  if (!data) return <div className="text-sm text-muted-foreground">Chargement de l'analyse…</div>;
   const ec = ecs.find((e) => e.id === ecId)!;
   const pie = [
     { name: "Positif", value: data.positive, color: "hsl(var(--success))" },
@@ -25,7 +52,7 @@ export default function SentimentAnalysis() {
           </h1>
           <p className="text-muted-foreground mt-1">Analyse intelligente des retours étudiants.</p>
         </div>
-        <select value={ecId} onChange={(e) => setEcId(Number(e.target.value))} className="px-4 py-2.5 rounded-xl bg-card border border-border outline-none input-glow text-sm">
+        <select value={ecId ?? undefined} onChange={(e) => setEcId(Number(e.target.value))} className="px-4 py-2.5 rounded-xl bg-card border border-border outline-none input-glow text-sm">
           {ecs.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
         </select>
       </div>

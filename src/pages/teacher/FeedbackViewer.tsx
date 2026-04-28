@@ -1,14 +1,77 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
-import { feedbacks as allFeedbacks, ecs } from "@/lib/mockData";
+import { useEffect, useState } from "react";
 import { RatingStars } from "@/components/RatingStars";
 import { SentimentBadge } from "@/components/SentimentBadge";
 import { Calendar, Filter, EyeOff } from "lucide-react";
-import type { Sentiment } from "@/types";
+import type { EC, Feedback, Sentiment } from "@/types";
+import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  mapEc,
+  mapFeedback,
+  type CourseElementDto,
+  type FeedbackDto,
+  type MentionDto,
+  type NiveauDto,
+  type PageResponse,
+  type ParcoursDto,
+  type SemestreDto,
+  type TeachingUnitDto,
+} from "@/lib/backend";
 
 export default function FeedbackViewer() {
+  const { user } = useAuth();
   const [filter, setFilter] = useState<Sentiment | "ALL">("ALL");
   const [ecId, setEcId] = useState<number | "ALL">("ALL");
+  const [allFeedbacks, setAllFeedbacks] = useState<Feedback[]>([]);
+  const [ecs, setEcs] = useState<EC[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (user?.role === "ADMIN") {
+        const mentions = await api.get<MentionDto[]>("/academic/mentions");
+        if (!mentions.data[0]) return;
+        const parcours = await api.get<ParcoursDto[]>(`/academic/mentions/${mentions.data[0].id}/parcours`);
+        if (!parcours.data[0]) return;
+        const niveaux = await api.get<NiveauDto[]>(`/academic/parcours/${parcours.data[0].id}/niveaux`);
+        if (!niveaux.data[0]) return;
+        const semestres = await api.get<SemestreDto[]>(`/academic/niveaux/${niveaux.data[0].id}/semestres`);
+        if (!semestres.data[0]) return;
+        const ues = await api.get<TeachingUnitDto[]>(`/academic/semestres/${semestres.data[0].id}/ues`);
+        if (!ues.data[0]) return;
+        const ecsRes = await api.get<CourseElementDto[]>(`/academic/ues/${ues.data[0].id}/ecs`);
+        const list = ecsRes.data.map(mapEc);
+        setEcs(list);
+        if (list[0]) {
+          const feedbackRes = await api.get<PageResponse<FeedbackDto>>(`/feedbacks/ec/${list[0].id}`, {
+            params: { page: 0, size: 100 },
+          });
+          setAllFeedbacks(feedbackRes.data.content.map(mapFeedback));
+          setEcId(list[0].id);
+        }
+        return;
+      }
+
+      const [coursesRes, feedbackRes] = await Promise.all([
+        api.get<CourseElementDto[]>("/teachers/me/courses"),
+        api.get<PageResponse<FeedbackDto>>("/feedbacks/teacher/me", { params: { page: 0, size: 100 } }),
+      ]);
+      setEcs(coursesRes.data.map(mapEc));
+      setAllFeedbacks(feedbackRes.data.content.map(mapFeedback));
+    };
+    void load();
+  }, [user?.role]);
+
+  useEffect(() => {
+    const loadAdminFeedbacks = async () => {
+      if (user?.role !== "ADMIN" || ecId === "ALL") return;
+      const { data } = await api.get<PageResponse<FeedbackDto>>(`/feedbacks/ec/${ecId}`, {
+        params: { page: 0, size: 100 },
+      });
+      setAllFeedbacks(data.content.map(mapFeedback));
+    };
+    void loadAdminFeedbacks();
+  }, [ecId, user?.role]);
 
   const filtered = allFeedbacks.filter((f) => (filter === "ALL" || f.sentiment === filter) && (ecId === "ALL" || f.ecId === ecId));
 

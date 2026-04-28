@@ -1,16 +1,27 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { X, Send, EyeOff, Eye, Loader2 } from "lucide-react";
-import { ecs } from "@/lib/mockData";
 import { RatingStars } from "@/components/RatingStars";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
+import { mapEc, type CourseElementDto } from "@/lib/backend";
+import type { EC } from "@/types";
 
 export function FeedbackModal({ ecId, onClose }: { ecId: number | null; onClose: () => void }) {
+  const [ecs, setEcs] = useState<EC[]>([]);
   const ec = ecs.find((e) => e.id === ecId);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [anonymous, setAnonymous] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await api.get<CourseElementDto[]>("/students/me/courses");
+      setEcs(data.map(mapEc));
+    };
+    void load();
+  }, []);
 
   useEffect(() => {
     if (ec) { setRating(0); setComment(""); setAnonymous(true); }
@@ -19,10 +30,20 @@ export function FeedbackModal({ ecId, onClose }: { ecId: number | null; onClose:
   const submit = async () => {
     if (!rating) return toast.error("Veuillez attribuer une note");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    toast.success("Feedback envoyé · Merci pour votre retour !");
-    onClose();
+    try {
+      await api.post("/feedbacks", {
+        ecId,
+        rating,
+        comment,
+        anonymous,
+      });
+      toast.success("Feedback envoyé · Merci pour votre retour !");
+      onClose();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Échec de l'envoi du feedback");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

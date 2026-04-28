@@ -1,23 +1,41 @@
 import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BookOpen, MessageSquare, TrendingUp, Award, ArrowRight } from "lucide-react";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
-import { ecs, feedbacks } from "@/lib/mockData";
 import { useAuth } from "@/contexts/AuthContext";
 import { RatingStars } from "@/components/RatingStars";
-import { SentimentBadge } from "@/components/SentimentBadge";
-
-const kpis = [
-  { label: "ECs suivis", value: 7, icon: BookOpen, accent: "from-primary to-primary-glow" },
-  { label: "Feedbacks donnés", value: 12, icon: MessageSquare, accent: "from-accent to-primary" },
-  { label: "Note moyenne", value: 4.2, decimals: 1, icon: Award, accent: "from-warning to-primary-glow" },
-  { label: "Taux participation", value: 87, suffix: "%", icon: TrendingUp, accent: "from-success to-accent" },
-];
+import { api } from "@/lib/api";
+import { mapEc, type CourseElementDto, type StudentProfileDto } from "@/lib/backend";
+import type { EC } from "@/types";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const myFeedbacks = feedbacks.slice(0, 4);
+  const [courses, setCourses] = useState<EC[]>([]);
+  const [profile, setProfile] = useState<StudentProfileDto | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const [coursesRes, profileRes] = await Promise.all([
+        api.get<CourseElementDto[]>("/students/me/courses"),
+        api.get<StudentProfileDto>("/students/me"),
+      ]);
+      setCourses(coursesRes.data.map(mapEc));
+      setProfile(profileRes.data);
+    };
+    void load();
+  }, []);
+
+  const kpis = useMemo(
+    () => [
+      { label: "ECs suivis", value: courses.length, icon: BookOpen, accent: "from-primary to-primary-glow" },
+      { label: "Feedbacks donnés", value: 0, icon: MessageSquare, accent: "from-accent to-primary" },
+      { label: "Note moyenne", value: 0, decimals: 1, icon: Award, accent: "from-warning to-primary-glow" },
+      { label: "Taux participation", value: 0, suffix: "%", icon: TrendingUp, accent: "from-success to-accent" },
+    ],
+    [courses.length]
+  );
 
   return (
     <div className="space-y-8">
@@ -25,7 +43,9 @@ export default function StudentDashboard() {
         <h1 className="font-display text-3xl md:text-4xl font-bold">
           Bonjour, <span className="gradient-text">{user?.fullName?.split(" ")[0]}</span> 👋
         </h1>
-        <p className="text-muted-foreground mt-2">Voici un aperçu de votre activité pédagogique cette semaine.</p>
+        <p className="text-muted-foreground mt-2">
+          {profile ? `${profile.niveau} · ${profile.academicYear}` : "Voici un aperçu de votre activité pédagogique cette semaine."}
+        </p>
       </motion.div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -63,7 +83,7 @@ export default function StudentDashboard() {
             </button>
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
-            {ecs.slice(0, 4).map((ec, i) => (
+            {courses.slice(0, 4).map((ec, i) => (
               <motion.button
                 key={ec.id}
                 initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
@@ -80,19 +100,19 @@ export default function StudentDashboard() {
         </div>
 
         <div className="card-elegant p-6">
-          <h2 className="font-display text-xl font-bold mb-5">Derniers avis</h2>
+          <h2 className="font-display text-xl font-bold mb-5">Infos</h2>
           <div className="space-y-3">
-            {myFeedbacks.map((f, i) => (
+            {courses.slice(0, 4).map((f, i) => (
               <motion.div
                 key={f.id}
                 initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
                 className="p-3 rounded-xl bg-muted/40"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs font-medium truncate">{f.ecName}</div>
-                  <SentimentBadge sentiment={f.sentiment} />
+                  <div className="text-xs font-medium truncate">{f.name}</div>
+                  <span className="text-[10px] font-mono px-2 py-1 rounded bg-muted text-muted-foreground">{f.code}</span>
                 </div>
-                <RatingStars value={f.rating} readOnly size={14} />
+                <RatingStars value={0} readOnly size={14} />
               </motion.div>
             ))}
           </div>

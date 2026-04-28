@@ -26,5 +26,3 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-export const USE_MOCK = !import.meta.env.VITE_API_URL;

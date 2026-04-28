@@ -1,16 +1,42 @@
 import { motion } from "framer-motion";
-import { feedbacks } from "@/lib/mockData";
+import { useEffect, useState } from "react";
 import { RatingStars } from "@/components/RatingStars";
 import { SentimentBadge } from "@/components/SentimentBadge";
 import { Calendar, EyeOff } from "lucide-react";
+import { api } from "@/lib/api";
+import { mapFeedback, type FeedbackDto, type PageResponse } from "@/lib/backend";
+import type { Feedback } from "@/types";
 
 export default function FeedbackHistory() {
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [available, setAvailable] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await api.get<PageResponse<FeedbackDto>>("/feedbacks/teacher/me", {
+          params: { page: 0, size: 50 },
+        });
+        setFeedbacks(data.content.map(mapFeedback));
+      } catch {
+        setAvailable(false);
+      }
+    };
+    void load();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-3xl font-bold">Historique de mes <span className="gradient-text">feedbacks</span></h1>
         <p className="text-muted-foreground mt-1">Tous les avis que vous avez soumis.</p>
       </div>
+
+      {!available && (
+        <div className="card-elegant p-5 text-sm text-muted-foreground">
+          L'historique étudiant dédié n'est pas encore exposé par l'API backend.
+        </div>
+      )}
 
       <div className="space-y-3">
         {feedbacks.slice(0, 12).map((f, i) => (

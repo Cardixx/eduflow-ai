@@ -1,22 +1,43 @@
 import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, RadialBarChart, RadialBar, Legend } from "recharts";
-import { ecs, feedbacks } from "@/lib/mockData";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { BarChart3, Download } from "lucide-react";
-
-const ratings = ecs.map((e) => {
-  const list = feedbacks.filter((f) => f.ecId === e.id);
-  const avg = list.length ? list.reduce((s, f) => s + f.rating, 0) / list.length : 0;
-  return { name: e.code, rating: Math.round(avg * 10) / 10, total: list.length };
-});
-
-const radial = [
-  { name: "Positif", value: 68, fill: "hsl(var(--success))" },
-  { name: "Neutre", value: 22, fill: "hsl(var(--warning))" },
-  { name: "Négatif", value: 10, fill: "hsl(var(--destructive))" },
-];
+import { api } from "@/lib/api";
+import { mapEc, type CourseElementDto, type ReportDto } from "@/lib/backend";
+import type { EC } from "@/types";
 
 export default function Reports() {
+  const [ecs, setEcs] = useState<EC[]>([]);
+  const [ratings, setRatings] = useState<Array<{ name: string; rating: number; total: number }>>([]);
+  const [report, setReport] = useState<ReportDto | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await api.get<CourseElementDto[]>("/teachers/me/courses");
+      const mapped = data.map(mapEc);
+      setEcs(mapped);
+      if (!mapped[0]) return;
+
+      const reports = await Promise.all(mapped.map((ec) => api.get<ReportDto>(`/reports/ec/${ec.id}`)));
+      setRatings(reports.map((r) => ({ name: r.data.ecCode, rating: Number(r.data.averageRating.toFixed(1)), total: r.data.totalFeedback })));
+      setReport(reports[0].data);
+    };
+    void load();
+  }, []);
+
+  const radial = useMemo(
+    () =>
+      report
+        ? [
+            { name: "Positif", value: report.positive, fill: "hsl(var(--success))" },
+            { name: "Neutre", value: report.neutral, fill: "hsl(var(--warning))" },
+            { name: "Négatif", value: report.negative, fill: "hsl(var(--destructive))" },
+          ]
+        : [],
+    [report]
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -32,11 +53,11 @@ export default function Reports() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { l: "Total avis", v: feedbacks.length },
+          {[
+          { l: "Total avis", v: report?.totalFeedback ?? 0 },
           { l: "ECs évalués", v: ecs.length },
-          { l: "Note moyenne", v: 4.1, dec: 1 },
-          { l: "Taux participation", v: 87, suffix: "%" },
+          { l: "Note moyenne", v: report?.averageRating ?? 0, dec: 1 },
+          { l: "Taux positifs", v: report ? Math.round((report.positive / Math.max(report.totalFeedback, 1)) * 100) : 0, suffix: "%" },
         ].map((k, i) => (
           <motion.div key={k.l} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="card-elegant p-5">
             <div className="text-xs text-muted-foreground">{k.l}</div>

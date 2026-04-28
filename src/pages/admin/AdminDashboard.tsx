@@ -1,8 +1,21 @@
 import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import { Users, BookOpen, MessageSquare, Building2 } from "lucide-react";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
-import { ecs, feedbacks, mentions } from "@/lib/mockData";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
+import { api } from "@/lib/api";
+import {
+  mapEc,
+  mapMention,
+  type CourseElementDto,
+  type MentionDto,
+  type NiveauDto,
+  type ParcoursDto,
+  type ReportDto,
+  type SemestreDto,
+  type TeachingUnitDto,
+} from "@/lib/backend";
+import type { EC, Mention } from "@/types";
 
 const monthly = Array.from({ length: 8 }).map((_, i) => ({
   m: `S${i + 1}`,
@@ -11,7 +24,45 @@ const monthly = Array.from({ length: 8 }).map((_, i) => ({
 }));
 
 export default function AdminDashboard() {
-  const dist = mentions.map((m, i) => ({ name: m.name, value: 20 + Math.round(Math.random() * 40), color: ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--primary-glow))"][i % 3] }));
+  const [mentions, setMentions] = useState<Mention[]>([]);
+  const [ecs, setEcs] = useState<EC[]>([]);
+  const [report, setReport] = useState<ReportDto | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const mentionsRes = await api.get<MentionDto[]>("/academic/mentions");
+      const mappedMentions = mentionsRes.data.map(mapMention);
+      setMentions(mappedMentions);
+
+      if (!mappedMentions[0]) return;
+      const parcours = await api.get<ParcoursDto[]>(`/academic/mentions/${mappedMentions[0].id}/parcours`);
+      if (!parcours.data[0]) return;
+      const niveaux = await api.get<NiveauDto[]>(`/academic/parcours/${parcours.data[0].id}/niveaux`);
+      if (!niveaux.data[0]) return;
+      const semestres = await api.get<SemestreDto[]>(`/academic/niveaux/${niveaux.data[0].id}/semestres`);
+      if (!semestres.data[0]) return;
+      const ues = await api.get<TeachingUnitDto[]>(`/academic/semestres/${semestres.data[0].id}/ues`);
+      if (!ues.data[0]) return;
+      const ecRes = await api.get<CourseElementDto[]>(`/academic/ues/${ues.data[0].id}/ecs`);
+      const mappedEcs = ecRes.data.map(mapEc);
+      setEcs(mappedEcs);
+      if (mappedEcs[0]) {
+        const reportRes = await api.get<ReportDto>(`/reports/ec/${mappedEcs[0].id}`);
+        setReport(reportRes.data);
+      }
+    };
+    void load();
+  }, []);
+
+  const dist = useMemo(
+    () =>
+      mentions.map((m, i) => ({
+        name: m.name,
+        value: 20 + Math.round(Math.random() * 40),
+        color: ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--primary-glow))"][i % 3],
+      })),
+    [mentions]
+  );
 
   return (
     <div className="space-y-8">
@@ -24,9 +75,9 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { l: "Utilisateurs", v: 1284, icon: Users, c: "from-primary to-primary-glow" },
+          { l: "Utilisateurs", v: 0, icon: Users, c: "from-primary to-primary-glow" },
           { l: "ECs actifs", v: ecs.length, icon: BookOpen, c: "from-accent to-primary" },
-          { l: "Feedbacks", v: feedbacks.length * 12, icon: MessageSquare, c: "from-success to-accent" },
+          { l: "Feedbacks", v: report?.totalFeedback ?? 0, icon: MessageSquare, c: "from-success to-accent" },
           { l: "Mentions", v: mentions.length, icon: Building2, c: "from-warning to-primary-glow" },
         ].map((k, i) => (
           <motion.div key={k.l} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}

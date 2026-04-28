@@ -1,30 +1,23 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronRight, Network, Building2, GraduationCap, Calendar, BookOpen, Layers } from "lucide-react";
-import { mentions, parcours, niveaux, semestres, ues, ecs } from "@/lib/mockData";
+import { api } from "@/lib/api";
+import {
+  mapEc,
+  mapMention,
+  mapNiveau,
+  mapParcours,
+  mapSemestre,
+  mapUe,
+  type CourseElementDto,
+  type MentionDto,
+  type NiveauDto,
+  type ParcoursDto,
+  type SemestreDto,
+  type TeachingUnitDto,
+} from "@/lib/backend";
 
 type Node = { id: string; label: string; sub?: string; icon: any; children?: Node[] };
-
-function build(): Node[] {
-  return mentions.map((m) => ({
-    id: `m-${m.id}`, label: m.name, sub: m.code, icon: Building2,
-    children: parcours.filter((p) => p.mentionId === m.id).map((p) => ({
-      id: `p-${p.id}`, label: p.name, icon: GraduationCap,
-      children: niveaux.filter((n) => n.parcoursId === p.id).map((n) => ({
-        id: `n-${n.id}`, label: n.name, icon: Layers,
-        children: semestres.filter((s) => s.niveauId === n.id).map((s) => ({
-          id: `s-${s.id}`, label: s.name, icon: Calendar,
-          children: ues.filter((u) => u.semestreId === s.id).map((u) => ({
-            id: `u-${u.id}`, label: u.name, sub: `${u.code} · ${u.credits} crédits`, icon: BookOpen,
-            children: ecs.filter((e) => e.ueId === u.id).map((e) => ({
-              id: `e-${e.id}`, label: e.name, sub: `${e.code} · ${e.teacherName}`, icon: Network,
-            })),
-          })),
-        })),
-      })),
-    })),
-  }));
-}
 
 function TreeNode({ node, depth }: { node: Node; depth: number }) {
   const [open, setOpen] = useState(depth < 1);
@@ -61,7 +54,97 @@ function TreeNode({ node, depth }: { node: Node; depth: number }) {
 }
 
 export default function AcademicStructure() {
-  const tree = build();
+  const [tree, setTree] = useState<Node[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadTree = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const mentionsRes = await api.get<MentionDto[]>("/academic/mentions");
+        const mentionNodes = await Promise.all(
+          mentionsRes.data.map(async (mentionDto) => {
+            const mention = mapMention(mentionDto);
+            const parcoursRes = await api.get<ParcoursDto[]>(`/academic/mentions/${mention.id}/parcours`);
+            const parcoursNodes = await Promise.all(
+              parcoursRes.data.map(async (parcoursDto) => {
+                const parcours = mapParcours(parcoursDto);
+                const niveauxRes = await api.get<NiveauDto[]>(`/academic/parcours/${parcours.id}/niveaux`);
+                const niveauNodes = await Promise.all(
+                  niveauxRes.data.map(async (niveauDto) => {
+                    const niveau = mapNiveau(niveauDto);
+                    const semestresRes = await api.get<SemestreDto[]>(`/academic/niveaux/${niveau.id}/semestres`);
+                    const semestreNodes = await Promise.all(
+                      semestresRes.data.map(async (semestreDto) => {
+                        const semestre = mapSemestre(semestreDto);
+                        const uesRes = await api.get<TeachingUnitDto[]>(`/academic/semestres/${semestre.id}/ues`);
+                        const ueNodes = await Promise.all(
+                          uesRes.data.map(async (ueDto) => {
+                            const ue = mapUe(ueDto);
+                            const ecsRes = await api.get<CourseElementDto[]>(`/academic/ues/${ue.id}/ecs`);
+                            const ecNodes: Node[] = ecsRes.data.map((ecDto) => {
+                              const ec = mapEc(ecDto);
+                              return {
+                                id: `e-${ec.id}`,
+                                label: ec.name,
+                                sub: `${ec.code} · ${ec.teacherName}`,
+                                icon: Network,
+                              };
+                            });
+                            return {
+                              id: `u-${ue.id}`,
+                              label: ue.name,
+                              sub: `${ue.code} · ${ue.credits} crédits`,
+                              icon: BookOpen,
+                              children: ecNodes,
+                            };
+                          })
+                        );
+                        return {
+                          id: `s-${semestre.id}`,
+                          label: semestre.name,
+                          icon: Calendar,
+                          children: ueNodes,
+                        };
+                      })
+                    );
+                    return {
+                      id: `n-${niveau.id}`,
+                      label: niveau.name,
+                      icon: Layers,
+                      children: semestreNodes,
+                    };
+                  })
+                );
+                return {
+                  id: `p-${parcours.id}`,
+                  label: parcours.name,
+                  icon: GraduationCap,
+                  children: niveauNodes,
+                };
+              })
+            );
+            return {
+              id: `m-${mention.id}`,
+              label: mention.name,
+              sub: mention.code,
+              icon: Building2,
+              children: parcoursNodes,
+            };
+          })
+        );
+        setTree(mentionNodes);
+      } catch {
+        setError("Impossible de charger la structure académique depuis le backend.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    void loadTree();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
@@ -71,7 +154,9 @@ export default function AcademicStructure() {
         <p className="text-muted-foreground mt-1">Hiérarchie : Mention → Parcours → Niveau → Semestre → UE → EC</p>
       </div>
       <div className="card-elegant p-3">
-        {tree.map((n) => <TreeNode key={n.id} node={n} depth={0} />)}
+        {loading && <div className="p-4 text-sm text-muted-foreground">Chargement de la structure académique…</div>}
+        {error && <div className="p-4 text-sm text-destructive">{error}</div>}
+        {!loading && !error && tree.map((n) => <TreeNode key={n.id} node={n} depth={0} />)}
       </div>
     </div>
   );

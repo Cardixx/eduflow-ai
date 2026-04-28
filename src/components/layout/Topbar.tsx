@@ -1,15 +1,35 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Moon, Sun, Search } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { notifications as mockNotifs } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
+import { mapNotification, type NotificationDto } from "@/lib/backend";
+import type { Notification } from "@/types";
 
 export function Topbar() {
   const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
-  const [notifs, setNotifs] = useState(mockNotifs);
+  const [notifs, setNotifs] = useState<Notification[]>([]);
   const unread = notifs.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await api.get<NotificationDto[]>("/notifications/me");
+        setNotifs(data.map(mapNotification));
+      } catch {
+        setNotifs([]);
+      }
+    };
+    void load();
+  }, []);
+
+  const markAllAsRead = async () => {
+    const unreadIds = notifs.filter((n) => !n.read).map((n) => n.id);
+    setNotifs((ns) => ns.map((n) => ({ ...n, read: true })));
+    await Promise.allSettled(unreadIds.map((id) => api.patch(`/notifications/${id}/read`)));
+  };
 
   return (
     <header className="h-16 px-4 lg:px-8 flex items-center gap-4 border-b border-border/60 bg-background/60 backdrop-blur-xl sticky top-0 z-30">
@@ -72,7 +92,7 @@ export function Topbar() {
                     <div className="text-xs text-muted-foreground">{unread} non lues</div>
                   </div>
                   <button
-                    onClick={() => setNotifs((ns) => ns.map((n) => ({ ...n, read: true })))}
+                    onClick={markAllAsRead}
                     className="text-xs text-primary hover:underline"
                   >
                     Tout marquer lu

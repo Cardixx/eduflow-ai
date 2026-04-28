@@ -1,15 +1,26 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ecs } from "@/lib/mockData";
 import { BookOpen, Search, MessageSquarePlus } from "lucide-react";
 import { FeedbackModal } from "./FeedbackModal";
+import { api } from "@/lib/api";
+import { mapEc, type CourseElementDto } from "@/lib/backend";
+import type { EC } from "@/types";
 
 export default function ECList() {
   const [search, setSearch] = useState("");
   const [params] = useSearchParams();
   const initial = params.get("ec");
   const [selected, setSelected] = useState<number | null>(initial ? Number(initial) : null);
+  const [ecs, setEcs] = useState<EC[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await api.get<CourseElementDto[]>("/students/me/courses");
+      setEcs(data.map(mapEc));
+    };
+    void load();
+  }, []);
 
   const filtered = ecs.filter((e) =>
     e.name.toLowerCase().includes(search.toLowerCase()) ||

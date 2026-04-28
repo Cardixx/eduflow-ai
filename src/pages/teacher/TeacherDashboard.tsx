@@ -1,31 +1,66 @@
 import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import { BookOpen, MessageSquare, Brain, Star } from "lucide-react";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
-import { ecs, feedbacks } from "@/lib/mockData";
 import { useAuth } from "@/contexts/AuthContext";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { SentimentBadge } from "@/components/SentimentBadge";
-
-const trend = Array.from({ length: 12 }).map((_, i) => ({
-  m: ["Sep", "Oct", "Nov", "Déc", "Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû"][i],
-  positive: 30 + Math.round(Math.random() * 40),
-  neutral: 10 + Math.round(Math.random() * 20),
-  negative: 5 + Math.round(Math.random() * 15),
-}));
+import { api } from "@/lib/api";
+import {
+  mapEc,
+  mapFeedback,
+  type CourseElementDto,
+  type FeedbackDto,
+  type PageResponse,
+  type ReportDto,
+} from "@/lib/backend";
+import type { EC, Feedback } from "@/types";
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
-  const myEcs = ecs.filter((e) => e.teacherName === user?.fullName) || ecs.slice(0, 3);
+  const [myEcs, setMyEcs] = useState<EC[]>([]);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [trend, setTrend] = useState<Array<{ m: string; positive: number; neutral: number; negative: number }>>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      const [coursesRes, feedbackRes] = await Promise.all([
+        api.get<CourseElementDto[]>("/teachers/me/courses"),
+        api.get<PageResponse<FeedbackDto>>("/feedbacks/teacher/me", { params: { page: 0, size: 100 } }),
+      ]);
+      const courses = coursesRes.data.map(mapEc);
+      setMyEcs(courses);
+      const mappedFeedbacks = feedbackRes.data.content.map(mapFeedback);
+      setFeedbacks(mappedFeedbacks);
+
+      if (courses.length > 0) {
+        const report = await api.get<ReportDto>(`/reports/ec/${courses[0].id}`);
+        setTrend(
+          report.data.trend.map((t) => ({
+            m: t.period,
+            positive: t.positive,
+            neutral: t.neutral,
+            negative: t.negative,
+          }))
+        );
+      }
+    };
+    void load();
+  }, []);
+
   const total = feedbacks.length;
   const positive = feedbacks.filter((f) => f.sentiment === "POSITIVE").length;
-  const avg = feedbacks.reduce((s, f) => s + f.rating, 0) / total;
+  const avg = total ? feedbacks.reduce((s, f) => s + f.rating, 0) / total : 0;
 
-  const kpis = [
-    { l: "ECs enseignés", v: myEcs.length, icon: BookOpen, accent: "from-primary to-primary-glow" },
-    { l: "Feedbacks reçus", v: total, icon: MessageSquare, accent: "from-accent to-primary" },
-    { l: "Note moyenne", v: avg, decimals: 1, icon: Star, accent: "from-warning to-primary-glow" },
-    { l: "% positifs", v: Math.round((positive / total) * 100), suffix: "%", icon: Brain, accent: "from-success to-accent" },
-  ];
+  const kpis = useMemo(
+    () => [
+      { l: "ECs enseignés", v: myEcs.length, icon: BookOpen, accent: "from-primary to-primary-glow" },
+      { l: "Feedbacks reçus", v: total, icon: MessageSquare, accent: "from-accent to-primary" },
+      { l: "Note moyenne", v: avg, decimals: 1, icon: Star, accent: "from-warning to-primary-glow" },
+      { l: "% positifs", v: total ? Math.round((positive / total) * 100) : 0, suffix: "%", icon: Brain, accent: "from-success to-accent" },
+    ],
+    [avg, myEcs.length, positive, total]
+  );
 
   return (
     <div className="space-y-8">
