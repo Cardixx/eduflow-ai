@@ -7,4 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     List<Enrollment> findByStudentId(Long studentId);
     boolean existsByStudentIdAndCourseElementId(Long studentId, Long courseElementId);
+    long countByStudentUserId(Long userId);
 }

@@ -1,10 +1,13 @@
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { GraduationCap, User, Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { Role } from "@/types";
+import { api } from "@/lib/api";
+import type { MentionDto, ParcoursDto, NiveauDto } from "@/lib/backend";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 export default function Register() {
   const { register } = useAuth();
@@ -14,16 +17,50 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("STUDENT");
   const [loading, setLoading] = useState(false);
+  const [studentNumber, setStudentNumber] = useState("");
+  const [niveauId, setNiveauId] = useState<number | undefined>();
+  const [niveaux, setNiveaux] = useState<NiveauDto[]>([]);
+  const [parcoursList, setParcoursList] = useState<ParcoursDto[]>([]);
+  const [mentions, setMentions] = useState<MentionDto[]>([]);
+  const [parcoursId, setParcoursId] = useState<number | undefined>();
+
+  useEffect(() => {
+    if (role === "STUDENT") {
+      api.get<MentionDto[]>("/academic/mentions").then((res) => {
+        setMentions(res.data);
+        if (res.data[0]) {
+          api.get<ParcoursDto[]>(`/academic/mentions/${res.data[0].id}/parcours`).then((pRes) => {
+            setParcoursList(pRes.data);
+            if (pRes.data[0]) {
+              api.get<NiveauDto[]>(`/academic/parcours/${pRes.data[0].id}/niveaux`).then((nRes) => {
+                setNiveaux(nRes.data);
+                if (nRes.data[0]) setNiveauId(nRes.data[0].id);
+              });
+            }
+          });
+        }
+      });
+    }
+  }, [role]);
+
+  useEffect(() => {
+    if (parcoursId) {
+      api.get<NiveauDto[]>(`/academic/parcours/${parcoursId}/niveaux`).then((res) => {
+        setNiveaux(res.data);
+        if (res.data[0]) setNiveauId(res.data[0].id);
+      });
+    }
+  }, [parcoursId]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await register({ fullName, email, password, role });
+      await register({ fullName, email, password, role, studentNumber: role === "STUDENT" ? studentNumber : undefined, niveauId: role === "STUDENT" ? niveauId : undefined });
       toast.success("Compte créé !");
       navigate("/app");
-    } catch (err: any) {
-      toast.error(err?.message || "Échec de l'inscription");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Échec de l'inscription"));
     } finally {
       setLoading(false);
     }
@@ -51,7 +88,7 @@ export default function Register() {
             <input required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Votre nom" className="flex-1 bg-transparent outline-none text-sm" />
           </Field>
           <Field icon={Mail} label="Email">
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@emit.dz" className="flex-1 bg-transparent outline-none text-sm" />
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@emit.mg" className="flex-1 bg-transparent outline-none text-sm" />
           </Field>
           <Field icon={Lock} label="Mot de passe">
             <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="flex-1 bg-transparent outline-none text-sm" />
@@ -72,6 +109,33 @@ export default function Register() {
               ))}
             </div>
           </div>
+
+          {role === "STUDENT" && (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Numéro étudiant</label>
+                <input
+                  required
+                  value={studentNumber}
+                  onChange={(e) => setStudentNumber(e.target.value)}
+                  placeholder="Ex: 2024-INFO-001"
+                  className="w-full px-3 py-3 rounded-xl border border-border bg-card input-glow transition-all outline-none text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Parcours</label>
+                <select
+                  value={parcoursId || ""}
+                  onChange={(e) => setParcoursId(Number(e.target.value))}
+                  className="w-full px-3 py-3 rounded-xl border border-border bg-card input-glow transition-all outline-none text-sm"
+                >
+                  {parcoursList.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
 
           <motion.button
             whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}

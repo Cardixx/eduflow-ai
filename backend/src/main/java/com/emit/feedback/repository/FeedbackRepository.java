@@ -11,7 +11,9 @@ import org.springframework.data.repository.query.Param;
 public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     Page<Feedback> findByCourseElementId(Long courseElementId, Pageable pageable);
     Page<Feedback> findByCourseElementTeacherId(Long teacherId, Pageable pageable);
+    Page<Feedback> findByStudentId(Long studentId, Pageable pageable);
     List<Feedback> findByCourseElementId(Long courseElementId);
+    long countByStudentUserId(Long userId);
 
     @Query("select avg(f.rating) from Feedback f where f.courseElement.id = :ecId")
     Double averageRating(@Param("ecId") Long ecId);

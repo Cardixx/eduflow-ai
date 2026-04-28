@@ -22,4 +22,8 @@ public class SecurityFacade {
         return userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UnauthorizedException("Authenticated user not found"));
     }
+
+    public Long currentUserId() {
+        return currentUser().getId();
+    }
 }

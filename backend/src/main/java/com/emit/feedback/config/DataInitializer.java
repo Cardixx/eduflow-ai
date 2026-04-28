@@ -49,11 +49,24 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         seedRoles();
+        seedAdmin();
         AcademicYear year = seedAcademicYear();
         Teacher teacher = seedTeacher();
         if (mentionRepository.count() == 0) {
             seedAcademicStructure(teacher, year);
         }
+    }
+
+    private void seedAdmin() {
+        Role adminRole = roleRepository.findByName(RoleName.ADMIN).orElseThrow();
+        userRepository.findByEmail("admin@emit.mg").orElseGet(() -> {
+            User created = new User();
+            created.setEmail("admin@emit.mg");
+            created.setPassword(passwordEncoder.encode("admin"));
+            created.setFullName("Platform Admin");
+            created.setRoles(Set.of(adminRole));
+            return userRepository.save(created);
+        });
     }
 
     private void seedRoles() {

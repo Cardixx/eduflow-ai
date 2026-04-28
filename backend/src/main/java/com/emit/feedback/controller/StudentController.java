@@ -15,6 +15,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.emit.feedback.repository.EnrollmentRepository;
+import com.emit.feedback.repository.FeedbackRepository;
+import com.emit.feedback.service.impl.SecurityFacade;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/students")
 @RequiredArgsConstructor
@@ -22,6 +27,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class StudentController {
 
     private final StudentService studentService;
+    private final FeedbackRepository feedbackRepository;
+    private final SecurityFacade securityFacade;
+    private final EnrollmentRepository enrollmentRepository;
 
     @GetMapping("/me")
     public StudentProfileDto getProfile() {
@@ -31,6 +39,18 @@ public class StudentController {
     @GetMapping("/me/courses")
     public List<CourseElementDto> getMyCourses() {
         return studentService.getMyCourses();
+    }
+
+    @GetMapping("/me/stats")
+    public Map<String, Object> getStats() {
+        Long userId = securityFacade.currentUserId();
+        long feedbackCount = feedbackRepository.countByStudentUserId(userId);
+        long enrollmentCount = enrollmentRepository.countByStudentUserId(userId);
+        return Map.of(
+                "feedbackCount", feedbackCount,
+                "enrollmentCount", enrollmentCount,
+                "participationRate", enrollmentCount == 0 ? 0 : (feedbackCount * 100 / enrollmentCount)
+        );
     }
 
     @PostMapping("/me/enrollments")

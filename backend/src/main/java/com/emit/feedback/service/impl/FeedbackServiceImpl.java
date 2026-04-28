@@ -79,6 +79,15 @@ public class FeedbackServiceImpl implements FeedbackService {
         return toPageResponse(result);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<FeedbackDto> getFeedbackForCurrentStudent(int page, int size) {
+        Student student = studentRepository.findByUserId(securityFacade.currentUser().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
+        Page<Feedback> result = feedbackRepository.findByStudentId(student.getId(), PageRequest.of(page, size));
+        return toPageResponse(result);
+    }
+
     private PageResponse<FeedbackDto> toPageResponse(Page<Feedback> result) {
         return new PageResponse<>(
                 result.getContent().stream().map(this::toDto).toList(),

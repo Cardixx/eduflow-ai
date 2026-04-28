@@ -4,6 +4,7 @@ import { useState, FormEvent } from "react";
 import { GraduationCap, Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 export default function Login() {
   const { login } = useAuth();
@@ -21,16 +22,14 @@ export default function Login() {
       await login(email, password);
       toast.success("Connexion réussie");
       navigate(location.state?.from?.pathname || "/app");
-    } catch (err: any) {
+    } catch (err) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
-      toast.error(err?.message || "Échec de la connexion");
+      toast.error(getApiErrorMessage(err, "Échec de la connexion"));
     } finally {
       setLoading(false);
     }
   };
-
-  const quick = (em: string, pw: string) => { setEmail(em); setPassword(pw); };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background overflow-hidden">
@@ -110,7 +109,7 @@ export default function Login() {
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <input
                   type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="vous@emit.dz"
+                  placeholder="vous@emit.mg"
                   className="flex-1 bg-transparent outline-none text-sm"
                 />
               </div>
@@ -136,29 +135,6 @@ export default function Login() {
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (<>Se connecter <ArrowRight className="h-4 w-4" /></>)}
             </motion.button>
           </form>
-
-          <div className="my-6 flex items-center gap-3">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-xs text-muted-foreground uppercase tracking-wider">Démo rapide</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { l: "Étudiant", e: "student@emit.dz", p: "student" },
-              { l: "Enseignant", e: "teacher@emit.dz", p: "teacher" },
-              { l: "Admin", e: "admin@emit.dz", p: "admin" },
-            ].map((q) => (
-              <button
-                key={q.l}
-                type="button"
-                onClick={() => quick(q.e, q.p)}
-                className="px-3 py-2.5 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 text-xs font-medium transition-all"
-              >
-                {q.l}
-              </button>
-            ))}
-          </div>
 
           <p className="mt-8 text-sm text-center text-muted-foreground">
             Pas de compte ? <Link to="/register" className="text-primary hover:underline font-medium">S'inscrire</Link>

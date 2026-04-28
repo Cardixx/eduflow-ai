@@ -17,38 +17,50 @@ import {
 } from "@/lib/backend";
 import type { EC, Mention } from "@/types";
 
-const monthly = Array.from({ length: 8 }).map((_, i) => ({
-  m: `S${i + 1}`,
-  feedbacks: 50 + Math.round(Math.random() * 80),
-  users: 200 + Math.round(Math.random() * 100),
-}));
-
 export default function AdminDashboard() {
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [ecs, setEcs] = useState<EC[]>([]);
   const [report, setReport] = useState<ReportDto | null>(null);
+  const [stats, setStats] = useState({ totalUsers: 0, totalFeedbacks: 0, totalEcs: 0, totalMentions: 0 });
+
+  const monthly = useMemo(() => {
+    if (!report?.trend) return [];
+    return report.trend.map(t => ({
+      m: t.period,
+      feedbacks: t.positive + t.neutral + t.negative,
+      users: Math.round((t.positive + t.neutral + t.negative) * 0.8)
+    }));
+  }, [report]);
 
   useEffect(() => {
     const load = async () => {
-      const mentionsRes = await api.get<MentionDto[]>("/academic/mentions");
-      const mappedMentions = mentionsRes.data.map(mapMention);
-      setMentions(mappedMentions);
+      try {
+        const [mentionsRes, statsRes] = await Promise.all([
+          api.get<MentionDto[]>("/academic/mentions"),
+          api.get<{ totalUsers: number; totalFeedbacks: number; totalEcs: number; totalMentions: number }>("/admin/stats"),
+        ]);
+        setStats(statsRes.data);
+        const mappedMentions = mentionsRes.data.map(mapMention);
+        setMentions(mappedMentions);
 
-      if (!mappedMentions[0]) return;
-      const parcours = await api.get<ParcoursDto[]>(`/academic/mentions/${mappedMentions[0].id}/parcours`);
-      if (!parcours.data[0]) return;
-      const niveaux = await api.get<NiveauDto[]>(`/academic/parcours/${parcours.data[0].id}/niveaux`);
-      if (!niveaux.data[0]) return;
-      const semestres = await api.get<SemestreDto[]>(`/academic/niveaux/${niveaux.data[0].id}/semestres`);
-      if (!semestres.data[0]) return;
-      const ues = await api.get<TeachingUnitDto[]>(`/academic/semestres/${semestres.data[0].id}/ues`);
-      if (!ues.data[0]) return;
-      const ecRes = await api.get<CourseElementDto[]>(`/academic/ues/${ues.data[0].id}/ecs`);
-      const mappedEcs = ecRes.data.map(mapEc);
-      setEcs(mappedEcs);
-      if (mappedEcs[0]) {
-        const reportRes = await api.get<ReportDto>(`/reports/ec/${mappedEcs[0].id}`);
-        setReport(reportRes.data);
+        if (!mappedMentions[0]) return;
+        const parcours = await api.get<ParcoursDto[]>(`/academic/mentions/${mappedMentions[0].id}/parcours`);
+        if (!parcours.data[0]) return;
+        const niveaux = await api.get<NiveauDto[]>(`/academic/parcours/${parcours.data[0].id}/niveaux`);
+        if (!niveaux.data[0]) return;
+        const semestres = await api.get<SemestreDto[]>(`/academic/niveaux/${niveaux.data[0].id}/semestres`);
+        if (!semestres.data[0]) return;
+        const ues = await api.get<TeachingUnitDto[]>(`/academic/semestres/${semestres.data[0].id}/ues`);
+        if (!ues.data[0]) return;
+        const ecRes = await api.get<CourseElementDto[]>(`/academic/ues/${ues.data[0].id}/ecs`);
+        const mappedEcs = ecRes.data.map(mapEc);
+        setEcs(mappedEcs);
+        if (mappedEcs[0]) {
+          const reportRes = await api.get<ReportDto>(`/reports/ec/${mappedEcs[0].id}`);
+          setReport(reportRes.data);
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard data", err);
       }
     };
     void load();
@@ -58,7 +70,7 @@ export default function AdminDashboard() {
     () =>
       mentions.map((m, i) => ({
         name: m.name,
-        value: 20 + Math.round(Math.random() * 40),
+        value: 1, // Placeholder for distribution
         color: ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--primary-glow))"][i % 3],
       })),
     [mentions]
@@ -75,16 +87,16 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { l: "Utilisateurs", v: 0, icon: Users, c: "from-primary to-primary-glow" },
-          { l: "ECs actifs", v: ecs.length, icon: BookOpen, c: "from-accent to-primary" },
-          { l: "Feedbacks", v: report?.totalFeedback ?? 0, icon: MessageSquare, c: "from-success to-accent" },
-          { l: "Mentions", v: mentions.length, icon: Building2, c: "from-warning to-primary-glow" },
+          { l: "Utilisateurs", v: stats.totalUsers, icon: Users, c: "from-primary to-primary-glow" },
+          { l: "ECs actifs", v: stats.totalEcs, icon: BookOpen, accent: "from-accent to-primary" },
+          { l: "Feedbacks", v: stats.totalFeedbacks, icon: MessageSquare, accent: "from-success to-accent" },
+          { l: "Mentions", v: stats.totalMentions, icon: Building2, accent: "from-warning to-primary-glow" },
         ].map((k, i) => (
           <motion.div key={k.l} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
             className="card-elegant p-5 relative overflow-hidden">
-            <div className={`absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br ${k.c} opacity-20 blur-2xl`} />
+            <div className={`absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br ${k.accent || k.c} opacity-20 blur-2xl`} />
             <div className="relative">
-              <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${k.c} grid place-items-center shadow-glow mb-3`}>
+              <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${k.accent || k.c} grid place-items-center shadow-glow mb-3`}>
                 <k.icon className="h-5 w-5 text-white" />
               </div>
               <div className="text-xs text-muted-foreground">{k.l}</div>

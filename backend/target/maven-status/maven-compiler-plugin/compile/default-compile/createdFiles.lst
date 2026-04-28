@@ -51,6 +51,7 @@ com/emit/feedback/dto/common/ErrorResponse.class
 com/emit/feedback/entity/Teacher.class
 com/emit/feedback/service/FeedbackService.class
 com/emit/feedback/exception/BadRequestException.class
+com/emit/feedback/controller/UserController.class
 com/emit/feedback/entity/CourseElement.class
 com/emit/feedback/repository/TeacherRepository.class
 com/emit/feedback/dto/report/ReportDto.class

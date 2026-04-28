@@ -4,6 +4,7 @@ import { X, Send, EyeOff, Eye, Loader2 } from "lucide-react";
 import { RatingStars } from "@/components/RatingStars";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { mapEc, type CourseElementDto } from "@/lib/backend";
 import type { EC } from "@/types";
 
@@ -14,6 +15,9 @@ export function FeedbackModal({ ecId, onClose }: { ecId: number | null; onClose:
   const [comment, setComment] = useState("");
   const [anonymous, setAnonymous] = useState(true);
   const [loading, setLoading] = useState(false);
+  const trimmedComment = comment.trim();
+  const isCommentValid = trimmedComment.length >= 5;
+  const canSubmit = Boolean(ecId) && rating > 0 && isCommentValid && !loading;
 
   useEffect(() => {
     const load = async () => {
@@ -29,18 +33,21 @@ export function FeedbackModal({ ecId, onClose }: { ecId: number | null; onClose:
 
   const submit = async () => {
     if (!rating) return toast.error("Veuillez attribuer une note");
+    if (!ecId) return toast.error("Veuillez sélectionner un EC");
+    if (!isCommentValid) return toast.error("Le commentaire doit contenir au moins 5 caractères");
+
     setLoading(true);
     try {
       await api.post("/feedbacks", {
         ecId,
         rating,
-        comment,
+        comment: trimmedComment,
         anonymous,
       });
       toast.success("Feedback envoyé · Merci pour votre retour !");
       onClose();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Échec de l'envoi du feedback");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Échec de l'envoi du feedback"));
     } finally {
       setLoading(false);
     }
@@ -85,7 +92,12 @@ export function FeedbackModal({ ecId, onClose }: { ecId: number | null; onClose:
                     placeholder="Partagez votre expérience…"
                     className="w-full p-3 rounded-xl border border-border bg-card outline-none input-glow text-sm resize-none transition-all"
                   />
-                  <div className="text-[11px] text-muted-foreground text-right mt-1">{comment.length}/500</div>
+                  <div className="mt-1 flex items-center justify-between text-[11px]">
+                    <span className={isCommentValid || comment.length === 0 ? "text-muted-foreground" : "text-destructive"}>
+                      Minimum 5 caractères
+                    </span>
+                    <span className="text-muted-foreground">{comment.length}/500</span>
+                  </div>
                 </div>
 
                 <button
@@ -110,7 +122,7 @@ export function FeedbackModal({ ecId, onClose }: { ecId: number | null; onClose:
 
                 <motion.button
                   whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-                  disabled={loading} onClick={submit}
+                  disabled={!canSubmit} onClick={submit}
                   className="w-full h-12 rounded-xl bg-gradient-aurora text-white font-semibold flex items-center justify-center gap-2 btn-glow shadow-elegant disabled:opacity-60"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (<>Envoyer le feedback <Send className="h-4 w-4" /></>)}

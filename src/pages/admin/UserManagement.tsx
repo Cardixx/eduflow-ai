@@ -1,15 +1,9 @@
 import { motion } from "framer-motion";
-import { Users as UsersIcon, Plus, Search, MoreVertical, Mail } from "lucide-react";
-import { useState } from "react";
-
-const seed = [
-  { id: 1, name: "Amina Berrada", email: "amina@emit.dz", role: "STUDENT", status: "active" },
-  { id: 2, name: "Yassir Lamine", email: "yassir@emit.dz", role: "STUDENT", status: "active" },
-  { id: 3, name: "Dr. Karim Idrissi", email: "karim@emit.dz", role: "TEACHER", status: "active" },
-  { id: 4, name: "Pr. Hicham Bennani", email: "hicham@emit.dz", role: "TEACHER", status: "active" },
-  { id: 5, name: "Sofia El Amrani", email: "sofia@emit.dz", role: "ADMIN", status: "active" },
-  { id: 6, name: "Lina Tazi", email: "lina@emit.dz", role: "STUDENT", status: "pending" },
-];
+import { Users as UsersIcon, Plus, Search, MoreVertical, Mail, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
+import { mapUser, type UserDto } from "@/lib/backend";
+import type { User } from "@/types";
 
 const roleColor: Record<string, string> = {
   STUDENT: "bg-primary/15 text-primary border-primary/30",
@@ -18,8 +12,29 @@ const roleColor: Record<string, string> = {
 };
 
 export default function UserManagement() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
-  const filtered = seed.filter((u) => u.name.toLowerCase().includes(q.toLowerCase()) || u.email.toLowerCase().includes(q.toLowerCase()));
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await api.get<UserDto[]>("/admin/users");
+        setUsers(res.data.map(mapUser));
+      } catch (err) {
+        console.error("Failed to load users", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, []);
+
+  const filtered = users.filter(
+    (u) =>
+      u.fullName.toLowerCase().includes(q.toLowerCase()) ||
+      u.email.toLowerCase().includes(q.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -43,43 +58,49 @@ export default function UserManagement() {
       </div>
 
       <div className="card-elegant overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border/60 bg-muted/30">
-            <tr className="text-left text-xs uppercase text-muted-foreground tracking-wider">
-              <th className="px-5 py-3">Utilisateur</th>
-              <th className="px-5 py-3">Rôle</th>
-              <th className="px-5 py-3">Statut</th>
-              <th className="px-5 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/40">
-            {filtered.map((u, i) => (
-              <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }} className="hover:bg-muted/30 transition-colors">
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-gradient-aurora grid place-items-center text-white font-semibold text-sm">{u.name.charAt(0)}</div>
-                    <div>
-                      <div className="font-medium">{u.name}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> {u.email}</div>
+        {loading ? (
+          <div className="p-12 flex justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="border-b border-border/60 bg-muted/30">
+              <tr className="text-left text-xs uppercase text-muted-foreground tracking-wider">
+                <th className="px-5 py-3">Utilisateur</th>
+                <th className="px-5 py-3">Rôle</th>
+                <th className="px-5 py-3">Statut</th>
+                <th className="px-5 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {filtered.map((u, i) => (
+                <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-gradient-aurora grid place-items-center text-white font-semibold text-sm">{u.fullName.charAt(0)}</div>
+                      <div>
+                        <div className="font-medium">{u.fullName}</div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> {u.email}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-5 py-4">
-                  <span className={`text-[11px] font-medium px-2 py-1 rounded-md border ${roleColor[u.role]}`}>{u.role}</span>
-                </td>
-                <td className="px-5 py-4">
-                  <span className={`inline-flex items-center gap-1.5 text-xs ${u.status === "active" ? "text-success" : "text-warning"}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${u.status === "active" ? "bg-success" : "bg-warning"} animate-pulse-glow`} />
-                    {u.status === "active" ? "Actif" : "En attente"}
-                  </span>
-                </td>
-                <td className="px-5 py-4 text-right">
-                  <button className="p-2 rounded-lg hover:bg-muted transition-colors"><MoreVertical className="h-4 w-4" /></button>
-                </td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className={`text-[11px] font-medium px-2 py-1 rounded-md border ${roleColor[u.role]}`}>{u.role}</span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-success">
+                      <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-glow" />
+                      Actif
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-right">
+                    <button className="p-2 rounded-lg hover:bg-muted transition-colors"><MoreVertical className="h-4 w-4" /></button>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

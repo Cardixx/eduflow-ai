@@ -9,6 +9,7 @@
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/controller/ReportController.java
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/controller/StudentController.java
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/controller/TeacherController.java
+/home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/controller/UserController.java
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/dto/academic/AcademicYearDto.java
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/dto/academic/CourseElementDto.java
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/dto/academic/CourseElementUpsertRequest.java

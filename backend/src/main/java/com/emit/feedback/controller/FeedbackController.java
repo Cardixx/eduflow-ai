@@ -42,4 +42,11 @@ public class FeedbackController {
                                                         @RequestParam(defaultValue = "10") int size) {
         return feedbackService.getFeedbackForCurrentTeacher(page, size);
     }
+
+    @GetMapping("/student/me")
+    @PreAuthorize("hasRole('ETUDIANT')")
+    public PageResponse<FeedbackDto> getStudentFeedback(@RequestParam(defaultValue = "0") int page,
+                                                        @RequestParam(defaultValue = "10") int size) {
+        return feedbackService.getFeedbackForCurrentStudent(page, size);
+    }
 }

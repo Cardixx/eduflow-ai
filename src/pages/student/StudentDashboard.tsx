@@ -14,27 +14,34 @@ export default function StudentDashboard() {
   const navigate = useNavigate();
   const [courses, setCourses] = useState<EC[]>([]);
   const [profile, setProfile] = useState<StudentProfileDto | null>(null);
+  const [stats, setStats] = useState({ feedbackCount: 0, enrollmentCount: 0, participationRate: 0 });
 
   useEffect(() => {
     const load = async () => {
-      const [coursesRes, profileRes] = await Promise.all([
-        api.get<CourseElementDto[]>("/students/me/courses"),
-        api.get<StudentProfileDto>("/students/me"),
-      ]);
-      setCourses(coursesRes.data.map(mapEc));
-      setProfile(profileRes.data);
+      try {
+        const [coursesRes, profileRes, statsRes] = await Promise.all([
+          api.get<CourseElementDto[]>("/students/me/courses"),
+          api.get<StudentProfileDto>("/students/me"),
+          api.get<{ feedbackCount: number; enrollmentCount: number; participationRate: number }>("/students/me/stats"),
+        ]);
+        setCourses(coursesRes.data.map(mapEc));
+        setProfile(profileRes.data);
+        setStats(statsRes.data);
+      } catch (err) {
+        console.error("Failed to load student dashboard", err);
+      }
     };
     void load();
   }, []);
 
   const kpis = useMemo(
     () => [
-      { label: "ECs suivis", value: courses.length, icon: BookOpen, accent: "from-primary to-primary-glow" },
-      { label: "Feedbacks donnés", value: 0, icon: MessageSquare, accent: "from-accent to-primary" },
+      { label: "ECs suivis", value: stats.enrollmentCount, icon: BookOpen, accent: "from-primary to-primary-glow" },
+      { label: "Feedbacks donnés", value: stats.feedbackCount, icon: MessageSquare, accent: "from-accent to-primary" },
       { label: "Note moyenne", value: 0, decimals: 1, icon: Award, accent: "from-warning to-primary-glow" },
-      { label: "Taux participation", value: 0, suffix: "%", icon: TrendingUp, accent: "from-success to-accent" },
+      { label: "Taux participation", value: stats.participationRate, suffix: "%", icon: TrendingUp, accent: "from-success to-accent" },
     ],
-    [courses.length]
+    [stats]
   );
 
   return (
