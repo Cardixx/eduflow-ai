@@ -4,6 +4,7 @@ import com.emit.feedback.dto.auth.AuthResponse;
 import com.emit.feedback.dto.auth.LoginRequest;
 import com.emit.feedback.dto.auth.RegisterRequest;
 import com.emit.feedback.dto.user.UserDto;
+import com.emit.feedback.dto.user.UserUpdateRequest;
 import com.emit.feedback.entity.AcademicYear;
 import com.emit.feedback.entity.Niveau;
 import com.emit.feedback.entity.Role;
@@ -102,6 +103,35 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return buildAuthResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public UserDto updateUser(Long id, UserUpdateRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (request.email() != null && !request.email().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.email())) {
+                throw new BadRequestException("Email already exists");
+            }
+            user.setEmail(request.email());
+        }
+
+        if (request.fullName() != null) {
+            user.setFullName(request.fullName());
+        }
+
+        if (request.password() != null && !request.password().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.password()));
+        }
+
+        user = userRepository.save(user);
+        RoleName primaryRole = user.getRoles().stream()
+                .map(Role::getName)
+                .findFirst()
+                .orElse(RoleName.ETUDIANT);
+        return new UserDto(user.getId(), user.getEmail(), user.getFullName(), user.getAvatarUrl(), primaryRole);
     }
 
     private AuthResponse buildAuthResponse(User user) {

@@ -34,6 +34,7 @@
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/dto/user/StudentProfileDto.java
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/dto/user/TeacherProfileDto.java
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/dto/user/UserDto.java
+/home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/dto/user/UserUpdateRequest.java
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/entity/AcademicYear.java
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/entity/BaseEntity.java
 /home/sakay/eduflow-ai/backend/src/main/java/com/emit/feedback/entity/CourseElement.java

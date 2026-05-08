@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { Users as UsersIcon, Plus, Search, MoreVertical, Mail, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Users as UsersIcon, Plus, Search, MoreVertical, Mail, Loader2, Edit2, X, Lock, Save } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -16,20 +16,49 @@ export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({ email: "", password: "", fullName: "" });
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadUsers = async () => {
+    try {
+      const res = await api.get<UserDto[]>("/admin/users");
+      setUsers(res.data.map(mapUser));
+    } catch (err) {
+      console.error("Failed to load users", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await api.get<UserDto[]>("/admin/users");
-        setUsers(res.data.map(mapUser));
-      } catch (err) {
-        console.error("Failed to load users", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void load();
+    void loadUsers();
   }, []);
+
+  const handleEdit = (u: User) => {
+    setEditingUser(u);
+    setEditForm({ email: u.email, password: "", fullName: u.fullName });
+  };
+
+  const submitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setSubmitting(true);
+    try {
+      const { data } = await api.put<UserDto>(`/admin/users/${editingUser.id}`, {
+        email: editForm.email,
+        fullName: editForm.fullName,
+        password: editForm.password || undefined,
+      });
+      setUsers((prev) => prev.map((u) => (u.id === data.id ? mapUser(data) : u)));
+      toast.success("Utilisateur mis à jour");
+      setEditingUser(null);
+    } catch (err) {
+      toast.error("Erreur lors de la mise à jour");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const filtered = users.filter(
     (u) =>
@@ -109,12 +138,20 @@ export default function UserManagement() {
                     </span>
                   </td>
                   <td className="px-5 py-4 text-right">
-                    <button 
-                      onClick={() => handleDelete(u.id)}
-                      className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => handleEdit(u)}
+                        className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(u.id)}
+                        className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </motion.tr>
               ))}
@@ -122,6 +159,47 @@ export default function UserManagement() {
           </table>
         )}
       </div>
+
+      <AnimatePresence>
+        {editingUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setEditingUser(null)} />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-md card-elegant p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold font-display">Modifier <span className="gradient-text">l'utilisateur</span></h2>
+                <button onClick={() => setEditingUser(null)} className="p-2 hover:bg-muted rounded-lg transition-colors"><X className="h-5 w-5" /></button>
+              </div>
+              <form onSubmit={submitEdit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Nom complet</label>
+                  <input required placeholder="Ex: Jean Dupont" className="w-full px-3 py-2 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary/50 text-sm"
+                    value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <input type="email" required placeholder="email@emit.mg" className="w-full pl-10 pr-3 py-2 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary/50 text-sm"
+                      value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Nouveau mot de passe (optionnel)</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <input type="password" placeholder="••••••••" className="w-full pl-10 pr-3 py-2 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary/50 text-sm"
+                      value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Laissez vide pour conserver le mot de passe actuel.</p>
+                </div>
+                <button type="submit" disabled={submitting} className="w-full h-11 rounded-xl bg-gradient-aurora text-white font-semibold flex items-center justify-center gap-2 btn-glow shadow-elegant mt-2 disabled:opacity-50">
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4" /> Enregistrer</>}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

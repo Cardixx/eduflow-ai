@@ -1,6 +1,7 @@
 com/emit/feedback/service/impl/TeacherServiceImpl.class
 com/emit/feedback/controller/FeedbackController.class
 com/emit/feedback/config/OpenApiConfig.class
+com/emit/feedback/dto/user/UserUpdateRequest.class
 com/emit/feedback/controller/ReportController.class
 com/emit/feedback/entity/Role.class
 com/emit/feedback/entity/Parcours.class

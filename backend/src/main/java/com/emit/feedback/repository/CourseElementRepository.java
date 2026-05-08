@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CourseElementRepository extends JpaRepository<CourseElement, Long> {
-    List<CourseElement> findByTeachingUnitId(Long teachingUnitId);
+    List<CourseElement> findByTeachingUnitId(Long ueId);
     List<CourseElement> findByTeacherId(Long teacherId);
+    boolean existsByCode(String code);
 }

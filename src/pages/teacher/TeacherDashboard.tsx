@@ -27,9 +27,11 @@ export default function TeacherDashboard() {
   const [myEcs, setMyEcs] = useState<EC[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [trend, setTrend] = useState<Array<{ m: string; positive: number; neutral: number; negative: number }>>([]);
+  const [selectedTrendEc, setSelectedTrendEc] = useState<number | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [loadingTrend, setLoadingTrend] = useState(false);
 
-  // Form states
+  // Form states ... (rest remains same)
   const [newCourse, setNewCourse] = useState({
     code: "",
     name: "",
@@ -38,7 +40,7 @@ export default function TeacherDashboard() {
     ueId: 0,
   });
 
-  // Academic structure for selection
+  // Academic structure ...
   const [mentions, setMentions] = useState<MentionDto[]>([]);
   const [parcours, setParcours] = useState<ParcoursDto[]>([]);
   const [niveaux, setNiveaux] = useState<NiveauDto[]>([]);
@@ -58,25 +60,43 @@ export default function TeacherDashboard() {
       const mappedFeedbacks = feedbackRes.data.content.map(mapFeedback);
       setFeedbacks(mappedFeedbacks);
 
-      if (courses.length > 0) {
-        const report = await api.get<ReportDto>(`/reports/ec/${courses[0].id}`);
-        setTrend(
-          report.data.trend.map((t) => ({
-            m: t.period,
-            positive: t.positive,
-            neutral: t.neutral,
-            negative: t.negative,
-          }))
-        );
+      if (courses.length > 0 && !selectedTrendEc) {
+        setSelectedTrendEc(courses[0].id);
       }
     } catch (err) {
       console.error("Failed to load data", err);
+      toast.error("Erreur lors du chargement des données");
+    }
+  };
+
+  const loadTrend = async (ecId: number) => {
+    setLoadingTrend(true);
+    try {
+      const report = await api.get<ReportDto>(`/reports/ec/${ecId}`);
+      setTrend(
+        report.data.trend.map((t) => ({
+          m: new Date(t.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }),
+          positive: t.positive,
+          neutral: t.neutral,
+          negative: t.negative,
+        }))
+      );
+    } catch (err) {
+      console.error("Failed to load trend", err);
+    } finally {
+      setLoadingTrend(false);
     }
   };
 
   useEffect(() => {
     void loadMyData();
   }, []);
+
+  useEffect(() => {
+    if (selectedTrendEc) {
+      void loadTrend(selectedTrendEc);
+    }
+  }, [selectedTrendEc]);
 
   const loadAcademic = async () => {
     setLoadingAcademic(true);
@@ -91,27 +111,43 @@ export default function TeacherDashboard() {
   };
 
   const onMentionChange = async (id: number) => {
-    setParcours([]); setNiveaux([]); setSemestres([]); setUes([]);
-    const res = await api.get<ParcoursDto[]>(`/academic/mentions/${id}/parcours`);
-    setParcours(res.data);
+    try {
+      setParcours([]); setNiveaux([]); setSemestres([]); setUes([]);
+      const res = await api.get<ParcoursDto[]>(`/academic/mentions/${id}/parcours`);
+      setParcours(res.data);
+    } catch {
+      toast.error("Erreur lors du chargement des parcours");
+    }
   };
 
   const onParcoursChange = async (id: number) => {
-    setNiveaux([]); setSemestres([]); setUes([]);
-    const res = await api.get<NiveauDto[]>(`/academic/parcours/${id}/niveaux`);
-    setNiveaux(res.data);
+    try {
+      setNiveaux([]); setSemestres([]); setUes([]);
+      const res = await api.get<NiveauDto[]>(`/academic/parcours/${id}/niveaux`);
+      setNiveaux(res.data);
+    } catch {
+      toast.error("Erreur lors du chargement des niveaux");
+    }
   };
 
   const onNiveauChange = async (id: number) => {
-    setSemestres([]); setUes([]);
-    const res = await api.get<SemestreDto[]>(`/academic/niveaux/${id}/semestres`);
-    setSemestres(res.data);
+    try {
+      setSemestres([]); setUes([]);
+      const semRes = await api.get<SemestreDto[]>(`/academic/niveaux/${id}/semestres`);
+      setSemestres(semRes.data);
+    } catch {
+      toast.error("Erreur lors du chargement des semestres");
+    }
   };
 
   const onSemestreChange = async (id: number) => {
-    setUes([]);
-    const res = await api.get<TeachingUnitDto[]>(`/academic/semestres/${id}/ues`);
-    setUes(res.data);
+    try {
+      setUes([]);
+      const res = await api.get<TeachingUnitDto[]>(`/academic/semestres/${id}/ues`);
+      setUes(res.data);
+    } catch {
+      toast.error("Erreur lors du chargement des UEs");
+    }
   };
 
   const handleAddCourse = async (e: React.FormEvent) => {
@@ -185,8 +221,30 @@ export default function TeacherDashboard() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-2 card-elegant p-6">
-          <h2 className="font-display text-xl font-bold mb-4">Tendance des sentiments (12 mois)</h2>
-          <div className="h-72">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-display text-xl font-bold">Tendance des sentiments</h2>
+            {myEcs.length > 1 && (
+              <select
+                value={selectedTrendEc || ""}
+                onChange={(e) => setSelectedTrendEc(Number(e.target.value))}
+                className="text-xs bg-muted/50 border border-border rounded-lg px-2 py-1 outline-none"
+              >
+                {myEcs.map((ec) => (
+                  <option key={ec.id} value={ec.id}>{ec.code}</option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div className="h-72 relative">
+            {loadingTrend ? (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40 backdrop-blur-[1px]">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : trend.length === 0 ? (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/5 text-muted-foreground text-sm italic">
+                Données insuffisantes pour afficher la tendance.
+              </div>
+            ) : null}
             <ResponsiveContainer>
               <AreaChart data={trend}>
                 <defs>
@@ -218,16 +276,22 @@ export default function TeacherDashboard() {
         <div className="card-elegant p-6">
           <h2 className="font-display text-xl font-bold mb-4">Derniers retours</h2>
           <div className="space-y-3">
-            {feedbacks.slice(0, 4).map((f, i) => (
-              <motion.div key={f.id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-                className="p-3 rounded-xl bg-muted/40">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-xs font-medium truncate">{f.ecName}</div>
-                  <SentimentBadge sentiment={f.sentiment} />
-                </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">{f.comment}</p>
-              </motion.div>
-            ))}
+            {feedbacks.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground italic">
+                Aucun retour reçu pour le moment.
+              </div>
+            ) : (
+              feedbacks.slice(0, 4).map((f, i) => (
+                <motion.div key={f.id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
+                  className="p-3 rounded-xl bg-muted/40">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-xs font-medium truncate">{f.ecName}</div>
+                    <SentimentBadge sentiment={f.sentiment} />
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{f.comment}</p>
+                </motion.div>
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.emit.feedback.dto.auth.RegisterRequest;
+import com.emit.feedback.dto.user.UserUpdateRequest;
 import com.emit.feedback.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -52,6 +53,11 @@ public class UserController {
     @PostMapping("/users")
     public UserDto createUser(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request).user();
+    }
+
+    @PutMapping("/users/{id}")
+    public UserDto updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest request) {
+        return authService.updateUser(id, request);
     }
 
     @DeleteMapping("/users/{id}")

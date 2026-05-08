@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   const monthly = useMemo(() => {
     if (!report?.trend) return [];
     return report.trend.map(t => ({
-      m: t.period,
+      m: new Date(t.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }),
       feedbacks: t.positive + t.neutral + t.negative,
       users: Math.round((t.positive + t.neutral + t.negative) * 0.8)
     }));

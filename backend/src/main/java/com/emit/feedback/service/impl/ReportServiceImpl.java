@@ -14,6 +14,7 @@ import com.emit.feedback.repository.FeedbackRepository;
 import com.emit.feedback.repository.ReportRepository;
 import com.emit.feedback.repository.SentimentAnalysisRepository;
 import com.emit.feedback.service.ReportService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
@@ -32,6 +33,7 @@ public class ReportServiceImpl implements ReportService {
     private final SentimentAnalysisRepository sentimentAnalysisRepository;
     private final ReportRepository reportRepository;
     private final SecurityFacade securityFacade;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -65,7 +67,11 @@ public class ReportServiceImpl implements ReportService {
         Report report = new Report();
         report.setType(ReportType.EC_SUMMARY);
         report.setReferenceCode(ec.getCode());
-        report.setPayload(toPayload(dto));
+        try {
+            report.setPayload(objectMapper.writeValueAsString(dto));
+        } catch (Exception e) {
+            report.setPayload("{}");
+        }
         report.setGeneratedBy(securityFacade.currentUser());
         reportRepository.save(report);
         return dto;
@@ -83,12 +89,5 @@ public class ReportServiceImpl implements ReportService {
             return "The EC needs attention. Negative feedback is currently dominant.";
         }
         return "Student sentiment is mixed and should be monitored over time.";
-    }
-
-    private String toPayload(ReportDto dto) {
-        return """
-                {"ecId":%d,"ecCode":"%s","ecName":"%s","averageRating":%.2f,"totalFeedback":%d,"positive":%d,"neutral":%d,"negative":%d,"summary":"%s"}
-                """.formatted(dto.ecId(), dto.ecCode(), dto.ecName(), dto.averageRating(), dto.totalFeedback(),
-                dto.positive(), dto.neutral(), dto.negative(), dto.summary().replace("\"", "'")).trim();
     }
 }

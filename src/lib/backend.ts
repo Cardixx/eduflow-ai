@@ -113,7 +113,7 @@ export interface NotificationDto {
 }
 
 export interface SentimentTrendPointDto {
-  period: string;
+  date: string;
   positive: number;
   neutral: number;
   negative: number;
@@ -220,7 +220,7 @@ export const reportToSentiment = (report: ReportDto): SentimentAnalysis => ({
   totalFeedback: report.totalFeedback,
   summary: report.summary,
   trend: report.trend.map((point) => ({
-    date: point.period,
+    date: point.date,
     positive: point.positive,
     neutral: point.neutral,
     negative: point.negative,
