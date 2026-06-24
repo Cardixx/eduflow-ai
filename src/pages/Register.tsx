@@ -98,16 +98,27 @@ export default function Register() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md card-elegant p-8 relative z-10"
+        className="w-full max-w-2xl card-elegant p-8 relative z-10"
       >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="h-10 w-10 rounded-xl bg-gradient-aurora grid place-items-center shadow-glow">
-            <GraduationCap className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <div className="font-display font-bold text-lg">Créer un compte</div>
-            <div className="text-xs text-muted-foreground">Rejoignez la plateforme EMIT</div>
-          </div>
+        <div className="flex flex-col items-center mb-8 text-center">
+          <Link to="/" className="group mb-4">
+            <div className="h-16 w-16 rounded-2xl overflow-hidden bg-white grid place-items-center shadow-glow group-hover:scale-105 transition-transform">
+              <img 
+                src="https://emit.univ-fianarantsoa.mg/img/logo.png" 
+                alt="EMIT Logo" 
+                className="h-12 w-12 object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement?.classList.add('bg-gradient-aurora');
+                  const icon = document.createElement('div');
+                  icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-graduation-cap text-white"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>';
+                  e.currentTarget.parentElement?.appendChild(icon.firstChild as Node);
+                }}
+              />
+            </div>
+          </Link>
+          <h1 className="font-display text-3xl font-bold">Rejoindre l'EMIT</h1>
+          <p className="text-muted-foreground mt-2">Créez votre compte pour commencer.</p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">

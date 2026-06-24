@@ -40,13 +40,25 @@ export function Sidebar() {
           initial={{ rotate: -10, scale: 0.8, opacity: 0 }}
           animate={{ rotate: 0, scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 200 }}
-          className="h-10 w-10 rounded-2xl bg-gradient-aurora grid place-items-center shadow-glow"
+          className="h-10 w-10 rounded-xl overflow-hidden bg-white grid place-items-center shadow-glow"
         >
-          <GraduationCap className="h-5 w-5 text-white" />
+          <img 
+            src="https://emit.univ-fianarantsoa.mg/img/logo.png" 
+            alt="EMIT Logo" 
+            className="h-8 w-8 object-contain"
+            onError={(e) => {
+              // Fallback to icon if image fails to load
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.parentElement?.classList.add('bg-gradient-aurora');
+              const icon = document.createElement('div');
+              icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-graduation-cap text-white"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>';
+              e.currentTarget.parentElement?.appendChild(icon.firstChild as Node);
+            }}
+          />
         </motion.div>
         <div>
           <div className="font-display font-bold text-lg leading-none">EMIT</div>
-          <div className="text-[11px] text-muted-foreground tracking-wider uppercase">Feedback AI</div>
+          <div className="text-[11px] text-muted-foreground tracking-wider uppercase">Fianarantsoa</div>
         </div>
       </div>
 

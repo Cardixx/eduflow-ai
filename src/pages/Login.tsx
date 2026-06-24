@@ -46,13 +46,24 @@ export default function Login() {
             <motion.div
               animate={{ rotate: [0, 8, -8, 0] }}
               transition={{ duration: 6, repeat: Infinity }}
-              className="h-14 w-14 rounded-2xl bg-gradient-aurora grid place-items-center shadow-glow"
+              className="h-14 w-14 rounded-2xl overflow-hidden bg-white grid place-items-center shadow-glow"
             >
-              <GraduationCap className="h-7 w-7 text-white" />
+              <img 
+                src="https://emit.univ-fianarantsoa.mg/img/logo.png" 
+                alt="EMIT Logo" 
+                className="h-10 w-10 object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement?.classList.add('bg-gradient-aurora');
+                  const icon = document.createElement('div');
+                  icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-graduation-cap text-white"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>';
+                  e.currentTarget.parentElement?.appendChild(icon.firstChild as Node);
+                }}
+              />
             </motion.div>
             <div>
               <div className="font-display font-bold text-2xl">EMIT</div>
-              <div className="text-xs text-muted-foreground tracking-widest uppercase">Feedback Platform</div>
+              <div className="text-xs text-muted-foreground tracking-widest uppercase">Fianarantsoa</div>
             </div>
           </div>
           <h1 className="font-display text-5xl font-bold leading-tight mb-6">
@@ -93,8 +104,19 @@ export default function Login() {
           className={`w-full max-w-md ${shake ? "animate-shake" : ""}`}
         >
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="h-10 w-10 rounded-xl bg-gradient-aurora grid place-items-center">
-              <GraduationCap className="h-5 w-5 text-white" />
+            <div className="h-10 w-10 rounded-xl overflow-hidden bg-white grid place-items-center shadow-glow">
+              <img 
+                src="https://emit.univ-fianarantsoa.mg/img/logo.png" 
+                alt="EMIT Logo" 
+                className="h-8 w-8 object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement?.classList.add('bg-gradient-aurora');
+                  const icon = document.createElement('div');
+                  icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-graduation-cap text-white"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>';
+                  e.currentTarget.parentElement?.appendChild(icon.firstChild as Node);
+                }}
+              />
             </div>
             <div className="font-display font-bold text-xl">EMIT</div>
           </div>
