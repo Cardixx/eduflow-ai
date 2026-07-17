@@ -126,7 +126,7 @@ export default function Reports() {
     });
     
     // Automatic Summary
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    const finalY = (doc as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
     doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
     doc.text("Résumé Analytique", 14, finalY);

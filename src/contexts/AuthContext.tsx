@@ -20,7 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem("emit_user");
     if (stored) {
-      try { setUser(JSON.parse(stored)); } catch {}
+      try { setUser(JSON.parse(stored)); } catch (e) { /* ignore parse error */ }
     }
     setLoading(false);
   }, []);

@@ -222,7 +222,13 @@ export default function Register() {
   );
 }
 
-function Field({ icon: Icon, label, children }: { icon: any; label: string; children: React.ReactNode }) {
+type FieldProps = {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  children: React.ReactNode;
+};
+
+function Field({ icon: Icon, label, children }: FieldProps) {
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">{label}</label>

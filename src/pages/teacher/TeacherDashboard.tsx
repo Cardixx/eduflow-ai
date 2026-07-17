@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BookOpen, MessageSquare, Brain, Star, Plus, X, Loader2 } from "lucide-react";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,7 +49,7 @@ export default function TeacherDashboard() {
   const [loadingAcademic, setLoadingAcademic] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadMyData = async () => {
+  const loadMyData = useCallback(async () => {
     try {
       const [coursesRes, feedbackRes] = await Promise.all([
         api.get<CourseElementDto[]>("/teachers/me/courses"),
@@ -67,7 +67,7 @@ export default function TeacherDashboard() {
       console.error("Failed to load data", err);
       toast.error("Erreur lors du chargement des données");
     }
-  };
+  }, [selectedTrendEc]);
 
   const loadTrend = async (ecId: number) => {
     setLoadingTrend(true);
@@ -90,7 +90,7 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     void loadMyData();
-  }, []);
+  }, [loadMyData]);
 
   useEffect(() => {
     if (selectedTrendEc) {

@@ -18,7 +18,7 @@ import {
   type TeachingUnitDto,
 } from "@/lib/backend";
 
-type Node = { id: string; label: string; sub?: string; icon: any; children?: Node[] };
+type Node = { id: string; label: string; sub?: string; icon: React.ComponentType<{ className?: string }>; children?: Node[] };
 
 function TreeNode({ node, depth, onDelete }: { node: Node; depth: number; onDelete?: (id: string) => void }) {
   const [open, setOpen] = useState(depth < 1);
