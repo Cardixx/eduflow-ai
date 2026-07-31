@@ -1,5 +1,6 @@
 package com.emit.feedback.controller;
 
+import com.emit.feedback.dto.academic.CourseElementDto;
 import com.emit.feedback.dto.user.UserDto;
 import com.emit.feedback.entity.Role;
 import com.emit.feedback.entity.User;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -115,5 +117,22 @@ public class UserController {
                 "totalEcs", courseElementRepository.count(),
                 "totalMentions", mentionRepository.count()
         );
+    }
+
+    @GetMapping("/ecs")
+    @Transactional(readOnly = true)
+    public List<CourseElementDto> getAllCourseElements() {
+        return courseElementRepository.findAll().stream()
+                .map(ec -> new CourseElementDto(
+                        ec.getId(),
+                        ec.getCode(),
+                        ec.getName(),
+                        ec.getDescription(),
+                        ec.getHours(),
+                        ec.getTeachingUnit().getId(),
+                        ec.getTeacher().getId(),
+                        ec.getTeacher().getUser().getFullName()
+                ))
+                .toList();
     }
 }

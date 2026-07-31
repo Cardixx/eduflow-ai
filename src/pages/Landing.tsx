@@ -17,7 +17,7 @@ export default function Landing() {
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl overflow-hidden bg-white grid place-items-center shadow-glow">
             <img 
-              src="https://emit.univ-fianarantsoa.mg/img/logo.png" 
+              src="/logo-1.png" 
               alt="EMIT Logo" 
               className="h-8 w-8 object-contain"
               onError={(e) => {

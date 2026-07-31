@@ -138,7 +138,7 @@ export default function Register() {
           <Link to="/" className="group mb-4">
             <div className="h-16 w-16 rounded-2xl overflow-hidden bg-white grid place-items-center shadow-glow group-hover:scale-105 transition-transform">
               <img 
-                src="https://emit.univ-fianarantsoa.mg/img/logo.png" 
+                src="/logo-1.png" 
                 alt="EMIT Logo" 
                 className="h-12 w-12 object-contain"
                 onError={(e) => {

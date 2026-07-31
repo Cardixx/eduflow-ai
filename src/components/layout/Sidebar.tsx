@@ -43,7 +43,7 @@ export function Sidebar() {
           className="h-10 w-10 rounded-xl overflow-hidden bg-white grid place-items-center shadow-glow"
         >
           <img 
-            src="https://emit.univ-fianarantsoa.mg/img/logo.png" 
+            src="/icon.png" 
             alt="EMIT Logo" 
             className="h-8 w-8 object-contain"
             onError={(e) => {

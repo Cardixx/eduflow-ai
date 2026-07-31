@@ -9,31 +9,34 @@ import type { EC } from "@/types";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Reports() {
-  const [ecs, setEcs] = useState<EC[]>([]);
-  const [selectedEc, setSelectedEc] = useState<number | null>(null);
-  const [report, setReport] = useState<ReportDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingReport, setLoadingReport] = useState(false);
+   const { user } = useAuth();
+   const [ecs, setEcs] = useState<EC[]>([]);
+   const [selectedEc, setSelectedEc] = useState<number | null>(null);
+   const [report, setReport] = useState<ReportDto | null>(null);
+   const [loading, setLoading] = useState(true);
+   const [loadingReport, setLoadingReport] = useState(false);
 
-  useEffect(() => {
-    const loadEcs = async () => {
-      try {
-        const { data } = await api.get<CourseElementDto[]>("/teachers/me/courses");
-        const mapped = data.map(mapEc);
-        setEcs(mapped);
-        if (mapped.length > 0) {
-          setSelectedEc(mapped[0].id);
-        }
-      } catch (err) {
-        toast.error("Erreur lors du chargement des matières");
-      } finally {
-        setLoading(false);
-      }
-    };
-    void loadEcs();
-  }, []);
+   useEffect(() => {
+     const loadEcs = async () => {
+       try {
+         const endpoint = user?.role === "ADMIN" ? "/admin/ecs" : "/teachers/me/courses";
+         const { data } = await api.get<CourseElementDto[]>(endpoint);
+         const mapped = data.map(mapEc);
+         setEcs(mapped);
+         if (mapped.length > 0) {
+           setSelectedEc(mapped[0].id);
+         }
+       } catch (err) {
+         toast.error("Erreur lors du chargement des matières");
+       } finally {
+         setLoading(false);
+       }
+     };
+     void loadEcs();
+   }, [user?.role]);
 
   useEffect(() => {
     if (!selectedEc) return;
