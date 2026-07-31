@@ -7,6 +7,7 @@ public record UserDto(
         String email,
         String fullName,
         String avatarUrl,
-        RoleName role
+        RoleName role,
+        boolean active
 ) {
 }

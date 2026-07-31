@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register: AuthContextValue["register"] = async (payload) => {
-    const { data } = await api.post<AuthResponse>("/auth/register", {
+    await api.post<AuthResponse>("/auth/register", {
       email: payload.email,
       password: payload.password,
       fullName: payload.fullName,
@@ -53,9 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         department: payload.department,
       }),
     });
-    const mappedUser = mapUser(data.user);
-    persist(mappedUser, data.accessToken);
-    return mappedUser;
+    return { id: 0, email: payload.email, fullName: payload.fullName, role: payload.role, avatarUrl: undefined };
   };
 
   const logout = () => {

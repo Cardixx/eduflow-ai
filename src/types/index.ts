@@ -6,6 +6,7 @@ export interface User {
   fullName: string;
   role: Role;
   avatarUrl?: string;
+  active?: boolean;
 }
 
 export interface Mention { id: number; name: string; code: string; }

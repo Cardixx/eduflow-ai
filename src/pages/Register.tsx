@@ -24,8 +24,11 @@ export default function Register() {
   const [niveaux, setNiveaux] = useState<NiveauDto[]>([]);
   const [parcoursList, setParcoursList] = useState<ParcoursDto[]>([]);
   const [mentions, setMentions] = useState<MentionDto[]>([]);
+  const [mentionId, setMentionId] = useState<number | undefined>();
   const [parcoursId, setParcoursId] = useState<number | undefined>();
   const [loadingAcademic, setLoadingAcademic] = useState(false);
+  const [loadingParcours, setLoadingParcours] = useState(false);
+  const [loadingNiveaux, setLoadingNiveaux] = useState(false);
 
   useEffect(() => {
     if (role === "STUDENT") {
@@ -34,37 +37,68 @@ export default function Register() {
         .then((res) => {
           setMentions(res.data);
           if (res.data.length > 0) {
-            return api.get<ParcoursDto[]>(`/academic/mentions/${res.data[0].id}/parcours`);
+            setMentionId(res.data[0].id);
+          } else {
+            setMentionId(undefined);
           }
-          throw new Error("No mentions found");
         })
-        .then((pRes) => {
-          setParcoursList(pRes.data);
-          if (pRes.data.length > 0) {
-            setParcoursId(pRes.data[0].id);
-            return api.get<NiveauDto[]>(`/academic/parcours/${pRes.data[0].id}/niveaux`);
-          }
-          throw new Error("No parcours found");
+        .catch((err) => {
+          console.error("Failed to load mentions:", err);
+          toast.error("Erreur lors du chargement des mentions");
         })
-        .then((nRes) => {
-          setNiveaux(nRes.data);
-          if (nRes.data.length > 0) setNiveauId(nRes.data[0].id);
-        })
-        .catch((err) => console.error("Failed to load academic data:", err))
         .finally(() => setLoadingAcademic(false));
     }
   }, [role]);
 
   useEffect(() => {
-    if (parcoursId) {
+    if (role === "STUDENT" && mentionId) {
+      setLoadingParcours(true);
+      setParcoursList([]);
+      setParcoursId(undefined);
+      setNiveaux([]);
+      setNiveauId(undefined);
+      api.get<ParcoursDto[]>(`/academic/mentions/${mentionId}/parcours`)
+        .then((res) => {
+          setParcoursList(res.data);
+          if (res.data.length > 0) {
+            setParcoursId(res.data[0].id);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load parcours:", err);
+          toast.error("Erreur lors du chargement des parcours");
+        })
+        .finally(() => setLoadingParcours(false));
+    } else if (!mentionId) {
+      setParcoursList([]);
+      setParcoursId(undefined);
+      setNiveaux([]);
+      setNiveauId(undefined);
+    }
+  }, [role, mentionId]);
+
+  useEffect(() => {
+    if (role === "STUDENT" && parcoursId) {
+      setLoadingNiveaux(true);
+      setNiveaux([]);
+      setNiveauId(undefined);
       api.get<NiveauDto[]>(`/academic/parcours/${parcoursId}/niveaux`)
         .then((res) => {
           setNiveaux(res.data);
-          if (res.data.length > 0) setNiveauId(res.data[0].id);
+          if (res.data.length > 0) {
+            setNiveauId(res.data[0].id);
+          }
         })
-        .catch((err) => console.error("Failed to load niveaux:", err));
+        .catch((err) => {
+          console.error("Failed to load niveaux:", err);
+          toast.error("Erreur lors du chargement des niveaux");
+        })
+        .finally(() => setLoadingNiveaux(false));
+    } else if (!parcoursId) {
+      setNiveaux([]);
+      setNiveauId(undefined);
     }
-  }, [parcoursId]);
+  }, [role, parcoursId]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -84,8 +118,8 @@ export default function Register() {
         teacherCode: role === "TEACHER" ? teacherCode : undefined,
         department: role === "TEACHER" ? department : undefined,
       });
-      toast.success("Compte créé !");
-      navigate("/app");
+      toast.success("Demande d'inscription envoyée. L'administrateur doit valider votre compte.");
+      navigate("/login");
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Échec de l'inscription"));
     } finally {
@@ -135,7 +169,7 @@ export default function Register() {
           <div className="space-y-2">
             <label className="text-sm font-medium">Rôle</label>
             <div className="grid grid-cols-3 gap-2">
-              {(["STUDENT", "TEACHER", "ADMIN"] as Role[]).map((r) => (
+              {(["STUDENT", "TEACHER"] as Role[]).map((r) => (
                 <button
                   key={r} type="button" onClick={() => setRole(r)}
                   className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
@@ -160,19 +194,68 @@ export default function Register() {
                   className="w-full px-3 py-3 rounded-xl border border-border bg-card input-glow transition-all outline-none text-sm"
                 />
               </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Mention</label>
+                <select
+                  value={mentionId || ""}
+                  onChange={(e) => setMentionId(Number(e.target.value))}
+                  disabled={loadingAcademic || mentions.length === 0}
+                  className="w-full px-3 py-3 rounded-xl border border-border bg-card input-glow transition-all outline-none text-sm disabled:opacity-50"
+                >
+                  {loadingAcademic ? (
+                    <option value="">Chargement des mentions...</option>
+                  ) : mentions.length === 0 ? (
+                    <option value="">Aucune mention disponible</option>
+                  ) : (
+                    mentions.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.code})
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Parcours</label>
                 <select
                   value={parcoursId || ""}
                   onChange={(e) => setParcoursId(Number(e.target.value))}
-                  disabled={loadingAcademic || parcoursList.length === 0}
+                  disabled={loadingParcours || parcoursList.length === 0}
                   className="w-full px-3 py-3 rounded-xl border border-border bg-card input-glow transition-all outline-none text-sm disabled:opacity-50"
                 >
-                  {parcoursList.length === 0 ? (
-                    <option value="">Chargement...</option>
+                  {loadingParcours ? (
+                    <option value="">Chargement des parcours...</option>
+                  ) : parcoursList.length === 0 ? (
+                    <option value="">Aucun parcours disponible</option>
                   ) : (
                     parcoursList.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Niveau</label>
+                <select
+                  value={niveauId || ""}
+                  onChange={(e) => setNiveauId(Number(e.target.value))}
+                  disabled={loadingNiveaux || niveaux.length === 0}
+                  className="w-full px-3 py-3 rounded-xl border border-border bg-card input-glow transition-all outline-none text-sm disabled:opacity-50"
+                >
+                  {loadingNiveaux ? (
+                    <option value="">Chargement des niveaux...</option>
+                  ) : niveaux.length === 0 ? (
+                    <option value="">Aucun niveau disponible</option>
+                  ) : (
+                    niveaux.map((n) => (
+                      <option key={n.id} value={n.id}>
+                        {n.code}
+                      </option>
                     ))
                   )}
                 </select>

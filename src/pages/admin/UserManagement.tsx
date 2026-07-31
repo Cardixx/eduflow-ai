@@ -19,11 +19,16 @@ export default function UserManagement() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ email: "", password: "", fullName: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [pendingUsers, setPendingUsers] = useState<User[]>([]);
 
   const loadUsers = async () => {
     try {
-      const res = await api.get<UserDto[]>("/admin/users");
-      setUsers(res.data.map(mapUser));
+      const [usersRes, pendingRes] = await Promise.all([
+        api.get<UserDto[]>('/admin/users'),
+        api.get<UserDto[]>('/admin/users/pending'),
+      ]);
+      setUsers(usersRes.data.map(mapUser));
+      setPendingUsers(pendingRes.data.map(mapUser));
     } catch (err) {
       console.error("Failed to load users", err);
     } finally {
@@ -71,9 +76,33 @@ export default function UserManagement() {
     try {
       await api.delete(`/admin/users/${id}`);
       setUsers((prev) => prev.filter((u) => u.id !== id));
+      setPendingUsers((prev) => prev.filter((u) => u.id !== id));
       toast.success("Utilisateur supprimé");
     } catch {
       toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  const handleApprove = async (id: number) => {
+    try {
+      const { data } = await api.put<UserDto>(`/admin/users/${id}/approve`);
+      const approvedUser = mapUser(data);
+      setUsers((prev) => [approvedUser, ...prev.filter((u) => u.id !== id)]);
+      setPendingUsers((prev) => prev.filter((u) => u.id !== id));
+      toast.success("Compte approuvé");
+    } catch {
+      toast.error("Erreur lors de l'approbation");
+    }
+  };
+
+  const handleReject = async (id: number) => {
+    try {
+      await api.put(`/admin/users/${id}/reject`);
+      setPendingUsers((prev) => prev.filter((u) => u.id !== id));
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      toast.success("Demande refusée");
+    } catch {
+      toast.error("Erreur lors du refus");
     }
   };
 
@@ -100,6 +129,29 @@ export default function UserManagement() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher par nom ou email…" className="flex-1 bg-transparent outline-none text-sm" />
         </div>
       </div>
+
+      {pendingUsers.length > 0 && (
+        <div className="card-elegant p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Comptes en attente</h2>
+            <span className="text-sm text-muted-foreground">{pendingUsers.length} à valider</span>
+          </div>
+          <div className="space-y-2">
+            {pendingUsers.map((u) => (
+              <div key={u.id} className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 px-3 py-3">
+                <div>
+                  <div className="font-medium">{u.fullName}</div>
+                  <div className="text-sm text-muted-foreground">{u.email}</div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => void handleApprove(u.id)} className="rounded-lg bg-success/15 px-3 py-2 text-sm text-success">Approuver</button>
+                  <button onClick={() => void handleReject(u.id)} className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">Refuser</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="card-elegant overflow-hidden">
         {loading ? (
@@ -132,9 +184,9 @@ export default function UserManagement() {
                     <span className={`text-[11px] font-medium px-2 py-1 rounded-md border ${roleColor[u.role]}`}>{u.role}</span>
                   </td>
                   <td className="px-5 py-4">
-                    <span className="inline-flex items-center gap-1.5 text-xs text-success">
-                      <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-glow" />
-                      Actif
+                    <span className={`inline-flex items-center gap-1.5 text-xs ${u.active ? 'text-success' : 'text-warning'}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${u.active ? 'bg-success animate-pulse-glow' : 'bg-warning'}`} />
+                      {u.active ? 'Actif' : 'En attente'}
                     </span>
                   </td>
                   <td className="px-5 py-4 text-right">

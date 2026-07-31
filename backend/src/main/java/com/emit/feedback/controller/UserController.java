@@ -45,7 +45,25 @@ public class UserController {
                         user.getRoles().stream()
                                 .map(Role::getName)
                                 .findFirst()
-                                .orElse(RoleName.ETUDIANT)
+                                .orElse(RoleName.ETUDIANT),
+                        user.isActive()
+                ))
+                .toList();
+    }
+
+    @GetMapping("/users/pending")
+    public List<UserDto> getPendingUsers() {
+        return userRepository.findByActiveFalse().stream()
+                .map(user -> new UserDto(
+                        user.getId(),
+                        user.getEmail(),
+                        user.getFullName(),
+                        user.getAvatarUrl(),
+                        user.getRoles().stream()
+                                .map(Role::getName)
+                                .findFirst()
+                                .orElse(RoleName.ETUDIANT),
+                        false
                 ))
                 .toList();
     }
@@ -58,6 +76,30 @@ public class UserController {
     @PutMapping("/users/{id}")
     public UserDto updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest request) {
         return authService.updateUser(id, request);
+    }
+
+    @PutMapping("/users/{id}/approve")
+    public UserDto approveUser(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setActive(true);
+        userRepository.save(user);
+        return new UserDto(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getAvatarUrl(),
+                user.getRoles().stream().map(Role::getName).findFirst().orElse(RoleName.ETUDIANT),
+                true
+        );
+    }
+
+    @PutMapping("/users/{id}/reject")
+    public void rejectUser(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setActive(false);
+        userRepository.save(user);
     }
 
     @DeleteMapping("/users/{id}")

@@ -29,6 +29,7 @@ export interface UserDto {
   fullName: string;
   avatarUrl?: string;
   role: BackendRole;
+  active: boolean;
 }
 
 export interface AuthResponse {
@@ -150,6 +151,7 @@ export const mapUser = (user: UserDto): User => ({
   fullName: user.fullName,
   avatarUrl: user.avatarUrl,
   role: backendRoleToRole(user.role),
+  active: user.active,
 });
 
 export const mapEc = (ec: CourseElementDto): EC => ({

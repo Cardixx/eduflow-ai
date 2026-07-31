@@ -16,13 +16,15 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (r) => r,
   (error) => {
-    if (error?.response?.status === 401) {
+    const status = error?.response?.status;
+    if (status === 401) {
       localStorage.removeItem("emit_token");
       localStorage.removeItem("emit_user");
-      if (!location.pathname.startsWith("/login")) {
+      if (!location.pathname.startsWith("/login") && !location.pathname.startsWith("/register")) {
         location.href = "/login";
       }
     }
     return Promise.reject(error);
   }
 );
+

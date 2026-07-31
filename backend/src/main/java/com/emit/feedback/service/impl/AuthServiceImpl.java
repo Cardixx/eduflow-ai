@@ -61,6 +61,7 @@ public class AuthServiceImpl implements AuthService {
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setFullName(request.fullName());
         user.setAvatarUrl(request.avatarUrl());
+        user.setActive(false);
         user.setRoles(Set.of(role));
         User savedUser = userRepository.save(user);
 
@@ -98,10 +99,15 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password()));
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (!user.isActive()) {
+            throw new BadRequestException("Votre compte est en attente de validation par l'administrateur");
+        }
+
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.email(), request.password()));
         return buildAuthResponse(user);
     }
 
@@ -131,7 +137,7 @@ public class AuthServiceImpl implements AuthService {
                 .map(Role::getName)
                 .findFirst()
                 .orElse(RoleName.ETUDIANT);
-        return new UserDto(user.getId(), user.getEmail(), user.getFullName(), user.getAvatarUrl(), primaryRole);
+        return new UserDto(user.getId(), user.getEmail(), user.getFullName(), user.getAvatarUrl(), primaryRole, user.isActive());
     }
 
     private AuthResponse buildAuthResponse(User user) {
@@ -145,7 +151,8 @@ public class AuthServiceImpl implements AuthService {
                 user.getEmail(),
                 user.getFullName(),
                 user.getAvatarUrl(),
-                primaryRole
+                primaryRole,
+                user.isActive()
         ));
     }
 }
